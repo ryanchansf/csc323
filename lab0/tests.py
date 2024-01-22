@@ -42,5 +42,22 @@ class TestTask1(unittest.TestCase):
     def test_decode_6(self):
         self.assertEqual(base64_to_bytes(''), b'')
 
+class TestTask2(unittest.TestCase):
+    # test xor
+    def test_xor_1(self):
+        self.assertEqual(xor(b'hello', b'world'), b'\x1f\n\x1e\x00\x0b')
+
+    def test_xor_2(self):
+        self.assertEqual(xor(b'world', b'hello'), b'\x1f\n\x1e\x00\x0b')
+
+    def test_xor_3(self):
+        self.assertEqual(xor(b'', b'hello'), b'')
+
+    def test_xor_4(self):
+        self.assertEqual(xor(b'', b''), b'')
+
+    def test_xor_5(self):
+        self.assertEqual(xor(b'hello', b'wow'), b'\x1f\n\x1b\x1b\x00')
+
 if __name__ == '__main__':
     unittest.main()
