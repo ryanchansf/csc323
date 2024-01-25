@@ -142,6 +142,7 @@ def find_multi_byte_xor():
         # split the encrypted message into blocks based on the key length
         ciphers = [b""] * key_length
         messages = [""] * key_length
+        k = [0] * key_length
         # iterate through each byte in the encrypted message
         for i in range(len(encrypted_message)):
             # assign each byte to its corresponding block
@@ -159,9 +160,12 @@ def find_multi_byte_xor():
                     max_score = cur_score
                     # store the decrypted message for each block
                     messages[i] = list(cur_result.decode("utf-8"))
+                    k[i] = j
         # reconstruct the decrypted message from blocks
         for i in range(len(encrypted_message)):
             result += messages[i % key_length].pop(0)
+        print(f"Key length: {key_length}")
+        print(f"Key: 0x{bytes_to_hex(bytes(k))}")
         print(result)
     except Exception as e:
         print(e)
@@ -173,7 +177,7 @@ def caesar_shift(byte_string, shift):
     """
     result = b""
     for byte in byte_string:
-        result += bytes([(byte + ord('A') + shift) % 26 + ord('A')])
+        result += bytes([(byte + ord('A') - shift) % 26 + ord('A')])
     return result
 
 
@@ -183,16 +187,35 @@ def break_caesar_cipher(byte_string):
     """
     max_score = 0
     best_result = b""
+    shift = ""
+    # try all possible shifts
     for i in range(1, 27):
+        # shift the byte string
         result = caesar_shift(byte_string, i)
         cur_score = score(result)
         if cur_score > max_score:
             max_score = cur_score
             best_result = result
-    return best_result
+            shift = chr(i + int(ord('A')))
+            
+    return best_result, shift
 
 
 def break_vigenere():
+    """
+    Breaks the Vigenere cipher by performing the following steps:
+    
+    1. Read the encrypted message from the file "Lab0.TaskII.D.txt"
+    2. Find the key length by iterating through different key lengths and scoring the decrypted text
+    3. Sort the key length candidates in descending order based on their scores
+    4. Retrieve the top 3 key length candidates
+    5. For each key length candidate:
+        a. Split the encrypted message into k sub-message blocks based on the key length
+        b. Break the Caesar cipher for each sub-message to find the most likely decrypted text
+        c. Score the decrypted text and store it in a list
+        d. Reconstruct the decrypted message by combining the decrypted sub-messages
+        e. Print the decrypted message
+    """
     try:
         encrypted_message = open("Lab0.TaskII.D.txt", "r").read().encode("utf-8")
         # find the key length
@@ -203,8 +226,8 @@ def break_vigenere():
             cur_text = b""
             for j in range(0, len(encrypted_message), i):
                 cur_text += bytes([encrypted_message[j]])
-            # give us the most english text for each key length
-            result = break_caesar_cipher(cur_text)
+            # find the most english text for each key length
+            result, _ = break_caesar_cipher(cur_text)
             # score result and normalize by length
             cur_score = score(result) / len(cur_text)
             candidates.append([i, cur_score])
@@ -213,22 +236,32 @@ def break_vigenere():
         # retrieve the top 3 scores
         top_3_scores = candidates[:3]
         # find the key
-        print(top_3_scores)
-
-        key_length=14
+        print("Top 3 Scores:\n")
         for res in top_3_scores:
             key_length = res[0]
             result = ""
+            # split the encrypted message into blocks based on the key length
             ciphers = [b""] * key_length
             messages = [""] * key_length
+            key = ""
+            # iterate through each byte in the encrypted message
             for i in range(len(encrypted_message)):
                 ciphers[i % key_length] += bytes([encrypted_message[i]])
+            # iterate through each block
             for i in range(len(ciphers)):
-                cur_result = break_caesar_cipher(ciphers[i])
+                # try all possible shifts for each block
+                cur_result, shift = break_caesar_cipher(ciphers[i])
                 cur_score = score(cur_result)
+                # store the decrypted message for each block
                 messages[i] = list(cur_result.decode("utf-8"))
+                # append to key
+                key += shift
+            # reconstruct the decrypted message from blocks
             for i in range(len(encrypted_message)):
                 result += messages[i % key_length].pop(0)
+
+            print(f"Key length: {key_length}")
+            print(f"Key: {key}")
             print(result)
             print("------------")
     except Exception as e:
@@ -237,8 +270,8 @@ def break_vigenere():
 
 def main():
     # find_single_byte_xor()
-    find_multi_byte_xor()
-    # break_vigenere()
+    # find_multi_byte_xor()
+    break_vigenere()
 
 if __name__ == "__main__":
     main()
