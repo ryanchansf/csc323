@@ -269,8 +269,8 @@ def break_vigenere():
 
 
 def main():
-    # find_single_byte_xor()
-    # find_multi_byte_xor()
+    find_single_byte_xor()
+    find_multi_byte_xor()
     break_vigenere()
 
 if __name__ == "__main__":
