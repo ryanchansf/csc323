@@ -161,7 +161,6 @@ def break_vigenere():
         encrypted_message = open("Lab0.TaskII.D.txt", "r").read().encode("utf-8")
         # find the key length
         key_length = 0
-        max_score = 0
         # iterate through different key lengths
         candidates = []
         for i in range(1, 20):
@@ -189,12 +188,9 @@ def break_vigenere():
             for i in range(len(encrypted_message)):
                 ciphers[i % key_length] += bytes([encrypted_message[i]])
             for i in range(len(ciphers)):
-                max_score = 0
                 cur_result = break_caesar_cipher(ciphers[i])
                 cur_score = score(cur_result)
-                if cur_score > max_score:
-                    max_score = cur_score
-                    messages[i] = list(cur_result.decode("utf-8"))
+                messages[i] = list(cur_result.decode("utf-8"))
             for i in range(len(encrypted_message)):
                 result += messages[i % key_length].pop(0)
             print(result)
