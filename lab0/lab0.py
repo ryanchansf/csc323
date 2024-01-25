@@ -168,7 +168,9 @@ def break_vigenere():
             cur_text = b""
             for j in range(0, len(encrypted_message), i):
                 cur_text += bytes([encrypted_message[j]])
+            # give us the most english text for each key length
             result = break_caesar_cipher(cur_text)
+            # score result and normalize by length
             cur_score = score(result) / len(cur_text)
             candidates.append([i, cur_score])
         # sort candidates in descending order
