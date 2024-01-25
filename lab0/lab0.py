@@ -63,22 +63,27 @@ def find_single_byte_xor():
     2. For each string, decode it to a byte string
     3. For each byte string, XOR it with every possible byte (0-255) representing the single byte key
         a. For each XOR result, score it based on frequency analysis of the decoded byte string
-        b. Keep track of the highest score and the corresponding XOR result and key
+        b. Keep track of the highest score and the corresponding string
     4. Convert the XOR result to English and return with the key with the highest score
     """
     try:
         hex_strings = open("Lab0.TaskII.B.txt", "r").read().split("\n")
         max_score = 0
+        # iterate through each string
         for hex_string in hex_strings:
+            # decode to byte string
             byte_string = hex_to_bytes(hex_string)
+            # iterate through each possible key
             for i in range(256):
                 key = bytes([i])
+                # xor byte string with key and assign score to the key
                 result = xor(byte_string, key)
                 cur_score = score(result)
+                # update best result if necessary
                 if cur_score > max_score:
                     max_score = cur_score
                     best_result = result
-        return best_result
+        return best_result.decode("utf-8")
     except Exception as e:
         print(e)
 
@@ -161,8 +166,8 @@ def break_vigenere():
         encrypted_message = open("Lab0.TaskII.D.txt", "r").read().encode("utf-8")
         # find the key length
         key_length = 0
-        # iterate through different key lengths
         candidates = []
+        # iterate through different key lengths
         for i in range(1, 20):
             cur_text = b""
             for j in range(0, len(encrypted_message), i):
@@ -200,9 +205,9 @@ def break_vigenere():
 
 
 def main():
-    # print(find_single_byte_xor())
+    print(find_single_byte_xor())
     # print(find_multi_byte_xor())
-    print(break_vigenere())
+    # print(break_vigenere())
 
 if __name__ == "__main__":
     main()
