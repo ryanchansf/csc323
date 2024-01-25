@@ -91,8 +91,8 @@ def find_multi_byte_xor():
     reduce the number of candidate decryptions.
     """
     try:
-        encoded_base64 = open("Lab0.TaskII.C.txt", "r").read().split("\n")
-        encrypted_message = base64_to_bytes(encoded_base64[0])
+        encoded_base64 = open("Lab0.TaskII.C.txt", "r").read()
+        encrypted_message = base64_to_bytes(encoded_base64)
         # find the key length
         key_length = 0
         max_score = 0
@@ -109,7 +109,6 @@ def find_multi_byte_xor():
                 if cur_score > max_score:
                     max_score = cur_score
                     key_length = i
-        print(key_length)
         # find the key
         result = ""
         ciphers = [b""] * key_length
@@ -138,7 +137,7 @@ def caesar_shift(byte_string, shift):
     """
     result = b""
     for byte in byte_string:
-        result += bytes([(byte - ord('A') + shift) % 26 + ord('A')])
+        result += bytes([(byte + ord('A') + shift) % 26 + ord('A')])
     return result
 
 
@@ -159,30 +158,41 @@ def break_caesar_cipher(byte_string):
 
 def break_vigenere():
     try:
-        cipher_text = bytes(open("Lab0.TaskII.C.txt", "r").read(), encoding="utf-8")
-        # guess and check
-        options = []
-        print(len(cipher_text))
-        for i in range(1, 30):
-            mini_ciphers = [b""] * i
-            mini_messages = []
-            result = ""
-            for j in range(len(cipher_text)):
-                mini_ciphers[j % i] += bytes([cipher_text[j]])
-            for j in range(len(mini_ciphers)):
-                mini_messages.append(list(break_caesar_cipher(mini_ciphers[j]).decode("utf-8")))
-            for j in range(len(cipher_text)):
-                result += mini_messages[j % i].pop(0)
-            options.append(result)
+        encrypted_message = open("Lab0.TaskII.D.txt", "r").read().encode("utf-8")
+        # find the key length
+        key_length = 0
         max_score = 0
-        best_result = ""
-        for i in range(len(options)):
-            cur_score = score(bytes(options[i], encoding="utf-8"))
+        # iterate through different key lengths
+        for i in range(1, 20):
+            cur_text = b""
+            for j in range(2, len(encrypted_message), i):
+                cur_text += bytes([encrypted_message[j]])
+            result = break_caesar_cipher(cur_text)
+            cur_score = score(result)
             if cur_score > max_score:
                 max_score = cur_score
-                best_result = options[i]
-        print(i)
-        return best_result
+                key_length = i
+            print(max_score, i)
+        # find the key
+        print(key_length)
+        key_length=14
+        result = ""
+        ciphers = [b""] * key_length
+        messages = [""] * key_length
+        for i in range(len(encrypted_message)):
+            ciphers[i % key_length] += bytes([encrypted_message[i]])
+        for i in range(len(ciphers)):
+            max_score = 0
+            for j in range(1, 27, 1):
+                key = bytes([j])
+                cur_result = break_caesar_cipher(ciphers[i])
+                cur_score = score(cur_result)
+                if cur_score > max_score:
+                    max_score = cur_score
+                    messages[i] = list(cur_result.decode("utf-8"))
+        for i in range(len(encrypted_message)):
+            result += messages[i % key_length].pop(0)
+        return result
     except Exception as e:
         print(e)
 
