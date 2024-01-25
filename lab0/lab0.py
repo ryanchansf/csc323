@@ -163,36 +163,42 @@ def break_vigenere():
         key_length = 0
         max_score = 0
         # iterate through different key lengths
+        candidates = []
         for i in range(1, 20):
             cur_text = b""
-            for j in range(2, len(encrypted_message), i):
+            for j in range(0, len(encrypted_message), i):
                 cur_text += bytes([encrypted_message[j]])
             result = break_caesar_cipher(cur_text)
-            cur_score = score(result)
-            if cur_score > max_score:
-                max_score = cur_score
-                key_length = i
-            print(max_score, i)
+            cur_score = score(result) / len(cur_text)
+            candidates.append([i, cur_score])
+        # sort candidates in descending order
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        # retrieve the top 3 scores
+        top_3_scores = candidates[:3]
         # find the key
-        print(key_length)
+        print(top_3_scores)
+
         key_length=14
-        result = ""
-        ciphers = [b""] * key_length
-        messages = [""] * key_length
-        for i in range(len(encrypted_message)):
-            ciphers[i % key_length] += bytes([encrypted_message[i]])
-        for i in range(len(ciphers)):
-            max_score = 0
-            for j in range(1, 27, 1):
-                key = bytes([j])
-                cur_result = break_caesar_cipher(ciphers[i])
-                cur_score = score(cur_result)
-                if cur_score > max_score:
-                    max_score = cur_score
-                    messages[i] = list(cur_result.decode("utf-8"))
-        for i in range(len(encrypted_message)):
-            result += messages[i % key_length].pop(0)
-        return result
+        for res in top_3_scores:
+            key_length = res[0]
+            result = ""
+            ciphers = [b""] * key_length
+            messages = [""] * key_length
+            for i in range(len(encrypted_message)):
+                ciphers[i % key_length] += bytes([encrypted_message[i]])
+            for i in range(len(ciphers)):
+                max_score = 0
+                for j in range(1, 27, 1):
+                    key = bytes([j])
+                    cur_result = break_caesar_cipher(ciphers[i])
+                    cur_score = score(cur_result)
+                    if cur_score > max_score:
+                        max_score = cur_score
+                        messages[i] = list(cur_result.decode("utf-8"))
+            for i in range(len(encrypted_message)):
+                result += messages[i % key_length].pop(0)
+            print(result)
+            print("------------")
     except Exception as e:
         print(e)
 
