@@ -37,11 +37,10 @@ def xor(byte_string, key):
         result += bytes([byte_string[i] ^ key[i % len(key)]])
     return result
 
-def score(hex_string):
+def score(byte_string):
     """
     Scores a hex-encoded string based on frequency analysis of the decoded byte string
     """
-    byte_string = hex_to_bytes(hex_string)
     frequency = {
         'a': 8.167, 'b': 1.492, 'c': 2.782, 'd': 4.253, 'e': 12.702, 'f': 2.228, 'g': 2.015, 'h': 6.094,
         'i': 6.966, 'j': 0.153, 'k': 0.772, 'l': 4.025, 'm': 2.406, 'n': 6.749, 'o': 7.507, 'p': 1.929,
@@ -71,25 +70,127 @@ def find_single_byte_xor():
         hex_strings = open("Lab0.TaskII.B.txt", "r").read().split("\n")
         max_score = 0
         for hex_string in hex_strings:
-            print(hex_string)
-        #     byte_string = hex_to_bytes(hex_string)
-        #     for i in range(256):
-        #         key = bytes([i])
-        #         result = xor(byte_string, key)
-        #         score = 0
-        #         for j in range(len(result)):
-        #             if result[j] >= 65 and result[j] <= 90 or result[j] >= 97 and result[j] <= 122:
-        #                 score += 1
-        #         if score > max_score:
-        #             max_score = score
-        #             best_result = result
-        #             best_key = key
-        # return best_result, best_key
+            byte_string = hex_to_bytes(hex_string)
+            for i in range(256):
+                key = bytes([i])
+                result = xor(byte_string, key)
+                cur_score = score(result)
+                if cur_score > max_score:
+                    max_score = cur_score
+                    best_result = result
+        return best_result
     except Exception as e:
         print(e)
 
+
+def find_multi_byte_xor():
+    """
+    Lab0.TaskII.C.txt contains a plaintext that has been XOR’d 
+    against a multi-byte key (of unknown length) and then base64 encoded.
+    Find the key and decrypt the message. Use your scoring function to
+    reduce the number of candidate decryptions.
+    """
+    try:
+        encoded_base64 = open("Lab0.TaskII.C.txt", "r").read().split("\n")
+        encrypted_message = base64_to_bytes(encoded_base64[0])
+        # find the key length
+        key_length = 0
+        max_score = 0
+        # iterate through different key lengths
+        for i in range(1, 10):
+            cur_text = b""
+            for j in range(0, len(encrypted_message), i):
+                cur_text += bytes([encrypted_message[j]])
+            for j in range(256):
+                key = bytes([j])
+                # assign score to the key
+                result = xor(cur_text, key)
+                cur_score = score(result) / len(cur_text)
+                if cur_score > max_score:
+                    max_score = cur_score
+                    key_length = i
+        print(key_length)
+        # find the key
+        result = ""
+        ciphers = [b""] * key_length
+        messages = [""] * key_length
+        for i in range(len(encrypted_message)):
+            ciphers[i % key_length] += bytes([encrypted_message[i]])
+        for i in range(len(ciphers)):
+            max_score = 0
+            for j in range(256):
+                key = bytes([j])
+                cur_result = xor(ciphers[i], key)
+                cur_score = score(cur_result)
+                if cur_score > max_score:
+                    max_score = cur_score
+                    messages[i] = list(cur_result.decode("utf-8"))
+        for i in range(len(encrypted_message)):
+            result += messages[i % key_length].pop(0)
+        return result
+    except Exception as e:
+        print(e)
+
+
+def caesar_shift(byte_string, shift):
+    """
+    Shifts a byte string by a given shift amount
+    """
+    result = b""
+    for byte in byte_string:
+        result += bytes([(byte - ord('A') + shift) % 26 + ord('A')])
+    return result
+
+
+def break_caesar_cipher(byte_string):
+    """
+    Breaks a caesar cipher by trying all possible shifts and scoring the results
+    """
+    max_score = 0
+    best_result = b""
+    for i in range(1, 27):
+        result = caesar_shift(byte_string, i)
+        cur_score = score(result)
+        if cur_score > max_score:
+            max_score = cur_score
+            best_result = result
+    return best_result
+
+
+def break_vigenere():
+    try:
+        cipher_text = bytes(open("Lab0.TaskII.C.txt", "r").read(), encoding="utf-8")
+        # guess and check
+        options = []
+        print(len(cipher_text))
+        for i in range(1, 30):
+            mini_ciphers = [b""] * i
+            mini_messages = []
+            result = ""
+            for j in range(len(cipher_text)):
+                mini_ciphers[j % i] += bytes([cipher_text[j]])
+            for j in range(len(mini_ciphers)):
+                mini_messages.append(list(break_caesar_cipher(mini_ciphers[j]).decode("utf-8")))
+            for j in range(len(cipher_text)):
+                result += mini_messages[j % i].pop(0)
+            options.append(result)
+        max_score = 0
+        best_result = ""
+        for i in range(len(options)):
+            cur_score = score(bytes(options[i], encoding="utf-8"))
+            if cur_score > max_score:
+                max_score = cur_score
+                best_result = options[i]
+        print(i)
+        return best_result
+    except Exception as e:
+        print(e)
+
+
 def main():
-    find_single_byte_xor()
+    # print(find_single_byte_xor())
+    # print(find_multi_byte_xor())
+    print(break_vigenere())
 
 if __name__ == "__main__":
     main()

@@ -59,5 +59,8 @@ class TestTask2(unittest.TestCase):
     def test_xor_5(self):
         self.assertEqual(xor(b"hello", b"wow"), b"\x1f\n\x1b\x1b\x00")
 
+    def test_break_caesar(self):
+        self.assertEqual(break_caesar_cipher(b"AOPZPZHALZAAVZLLPMAOLIYLHRJHLZHYJPWOLYMBUJAPVUDVYRZ"), b"THISISATESTTOSEEIFTHEBREAKCAESARCIPHERFUNCTIONWORKS")
+
 if __name__ == "__main__":
     unittest.main()
