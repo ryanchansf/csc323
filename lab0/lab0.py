@@ -188,13 +188,11 @@ def break_vigenere():
                 ciphers[i % key_length] += bytes([encrypted_message[i]])
             for i in range(len(ciphers)):
                 max_score = 0
-                for j in range(1, 27, 1):
-                    key = bytes([j])
-                    cur_result = break_caesar_cipher(ciphers[i])
-                    cur_score = score(cur_result)
-                    if cur_score > max_score:
-                        max_score = cur_score
-                        messages[i] = list(cur_result.decode("utf-8"))
+                cur_result = break_caesar_cipher(ciphers[i])
+                cur_score = score(cur_result)
+                if cur_score > max_score:
+                    max_score = cur_score
+                    messages[i] = list(cur_result.decode("utf-8"))
             for i in range(len(encrypted_message)):
                 result += messages[i % key_length].pop(0)
             print(result)
