@@ -58,6 +58,7 @@ def score(byte_string):
 def find_single_byte_xor():
     """
     Finds and decrypts the single-byte XOR message in a list of hex-encoded strings
+
     Steps:
     1. Read in the hex-encoded strings from Lab0.TaskII.B.txt
     2. For each string, decode it to a byte string
@@ -69,11 +70,13 @@ def find_single_byte_xor():
     try:
         hex_strings = open("Lab0.TaskII.B.txt", "r").read().split("\n")
         max_score = 0
+        best_result = b""
+        k = ""
         # iterate through each string
         for hex_string in hex_strings:
             # decode to byte string
             byte_string = hex_to_bytes(hex_string)
-            # iterate through each possible key
+            # try each possible key
             for i in range(256):
                 key = bytes([i])
                 # xor byte string with key and assign score to the key
@@ -83,7 +86,9 @@ def find_single_byte_xor():
                 if cur_score > max_score:
                     max_score = cur_score
                     best_result = result
-        return best_result.decode("utf-8")
+                    k = bytes_to_hex(key)
+        print(f"Key: 0x{k}")
+        print(best_result.decode("utf-8"))
     except Exception as e:
         print(e)
 
@@ -94,44 +99,70 @@ def find_multi_byte_xor():
     against a multi-byte key (of unknown length) and then base64 encoded.
     Find the key and decrypt the message. Use your scoring function to
     reduce the number of candidate decryptions.
+    
+    Steps:
+    1. Read the base64 encoded message from the file "Lab0.TaskII.C.txt"
+    2. Convert the base64 encoded message to bytes
+    3. Find the length of the key by iterating through different key lengths
+        a. For each key length, build the transposed byte string
+        b. Try all possible keys and assign a score to each key based on the decrypted result
+        c. Keep track of the key length with the highest score
+    4. Split the encrypted message into k blocks where k is the key length
+    5. For each block, try all possible keys and assign a score to each key based on the decrypted result
+    6. Keep track of the decrypted message for each block using the key with the highest score
+    7. Combine the decrypted messages from each block to obtain the final decrypted result
+    8. Return the decrypted message
     """
     try:
         encoded_base64 = open("Lab0.TaskII.C.txt", "r").read()
         encrypted_message = base64_to_bytes(encoded_base64)
-        # find the key length
         key_length = 0
         max_score = 0
+        # find the key length
         # iterate through different key lengths
-        for i in range(1, 10):
+        for i in range(1, 40):
             cur_text = b""
+            # build transposed byte string
             for j in range(0, len(encrypted_message), i):
                 cur_text += bytes([encrypted_message[j]])
+            # try each possible key
             for j in range(256):
                 key = bytes([j])
                 # assign score to the key
                 result = xor(cur_text, key)
+                # score result and normalize by length
                 cur_score = score(result) / len(cur_text)
+                # update optimal key length if necessary
                 if cur_score > max_score:
                     max_score = cur_score
                     key_length = i
+
         # find the key
         result = ""
+        # split the encrypted message into blocks based on the key length
         ciphers = [b""] * key_length
         messages = [""] * key_length
+        # iterate through each byte in the encrypted message
         for i in range(len(encrypted_message)):
+            # assign each byte to its corresponding block
             ciphers[i % key_length] += bytes([encrypted_message[i]])
+        # iterate through each block
         for i in range(len(ciphers)):
             max_score = 0
+            # try each possible key
             for j in range(256):
                 key = bytes([j])
+                # assign score to the key
                 cur_result = xor(ciphers[i], key)
                 cur_score = score(cur_result)
                 if cur_score > max_score:
                     max_score = cur_score
+                    # store the decrypted message for each block
                     messages[i] = list(cur_result.decode("utf-8"))
+        # reconstruct the decrypted message from blocks
         for i in range(len(encrypted_message)):
             result += messages[i % key_length].pop(0)
-        return result
+        print(result)
     except Exception as e:
         print(e)
 
@@ -205,9 +236,9 @@ def break_vigenere():
 
 
 def main():
-    print(find_single_byte_xor())
-    # print(find_multi_byte_xor())
-    # print(break_vigenere())
+    # find_single_byte_xor()
+    find_multi_byte_xor()
+    # break_vigenere()
 
 if __name__ == "__main__":
     main()
