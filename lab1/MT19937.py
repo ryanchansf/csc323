@@ -8,6 +8,7 @@ class MT19937:
 		self.r = 31 # separation point of one word, or the number of bits of the lower bitmask, 0 ≤ r ≤ w - 1
 		self.a = 0x9908B0DF # coefficients of the rational normal form twist matrix
 		self.u = 11 # additional Mersenne Twister tempering bit shifts/masks
+		self.d = 0xFFFFFFFF
 		self.s = 7 # additional Mersenne Twister tempering bit shifts/masks
 		self.b = 0x9D2C5680 # additional Mersenne Twister tempering bit shifts/masks
 		self.t = 15 # additional Mersenne Twister tempering bit shifts/masks
