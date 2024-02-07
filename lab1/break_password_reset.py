@@ -60,7 +60,7 @@ def unmix(mt: MT19937, tokens: list[int]) -> None:
         # if (x % 2) != 0:
         #     xA = xA ^ mt.a
         # mt.MT[i] = mt.MT[(i + mt.m) % mt.n] ^ xA
-    mt.index = 624 # reset index
+    mt.index = 624 # reset index to seed the MT19937 PRNG
 
 
 def split_password_reset_token(decoded_token: str) -> int:
@@ -89,6 +89,18 @@ def request_password_reset_tokens(username) -> list[int]:
     return tokens
 
 
+def predict_next_password_reset_token(mt: MT19937) -> str:
+    """
+    Predict the next password reset token
+    """
+    token_parts = []
+    for i in range(8):
+        token_parts.append(str(mt.extract_number()))
+    token = ":".join(token_parts).encode("utf-8")
+    return token
+
+
+
 def break_password_reset() -> None:
     """
     Break the password reset function
@@ -104,6 +116,13 @@ def break_password_reset() -> None:
     unmix(mt, password_reset_tokens)
     print("MT19937 Cloned: ", mt)
 
+    # predict all future password reset tokens
+    while True:
+        if input("Predict the next password reset token? (y/n): ") == "n":
+            break
+        next_token = predict_next_password_reset_token(mt)
+        req_url = "http://localhost:8080/reset?token=" + bytes_to_base64(next_token)      
+        print("Request URL: ", req_url)
     
 
 def main():
