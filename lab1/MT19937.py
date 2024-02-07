@@ -1,7 +1,6 @@
 #Mersenne Twister MT 19937
 class MT19937:
 	def __init__(self, seed: bytes):
-		#TODO: Initialize MT state here
 		self.w = 32 # word size
 		self.n = 624 # degree of recurrence
 		self.m = 397 # middle word, an offset used in the recurrence relation defining the series x, 1 ≤ m < n
@@ -41,7 +40,6 @@ class MT19937:
 		Extract a tempered value based on MT[index]
 		calling twist() every n numbers
 		"""
-		#TODO: Temper and Extract Here
 		if self.index >= self.n:
 			if self.index > self.n:
 				print("Generator was never seeded")
@@ -49,10 +47,10 @@ class MT19937:
 			self.twist()
 
 		y = self.MT[self.index] # Extract a tempered value based on MT[index]
-		y = y ^ ((y >> self.u) & self.d) # Tempering
-		y = y ^ ((y << self.s) & self.b) # Tempering
-		y = y ^ ((y << self.t) & self.c) # Tempering
-		y = y ^ (y >> self.l) # Tempering
+		y = y ^ ((y >> self.u) & self.d) # right shift tempering
+		y = y ^ ((y << self.s) & self.b) # left shift tempering
+		y = y ^ ((y << self.t) & self.c) # left shift tempering
+		y = y ^ (y >> self.l) # right shift tempering
 
 		self.index += 1
 		return y & ((1 << self.w) - 1) # return lowest w bits of y
@@ -62,7 +60,6 @@ class MT19937:
 		"""
 		Generate the next n values from the series x_i
 		"""
-		#TODO: Mix state here
 		for i in range(self.n):
 			x = (self.MT[i] & self.upper_mask) + (self.MT[(i + 1) % self.n] & self.lower_mask)
 			xA = x >> 1
