@@ -12,39 +12,91 @@ recreate the initial state of the generator. Using this initial state, you can c
 Demonstrate this by resetting the admin user's password and logging in as her
 """
 
-def unshift_left(mt: MT19937, y: int, shift: int, mask: int) -> int:
-    """
-    Unshift left
-    """
-    result = 0
-    for i in range(mt.w):
-        bit = (y >> ((i + shift) % mt.w)) & 1
-        result |= bit << i
-    return result & mask
+# def unshift_left(mt: MT19937, y: int, shift: int, mask: int) -> int:
+#     """
+#     Unshift left
+#     """
+#     result = 0
+#     for i in range(mt.w):
+#         bit = (y >> ((i + shift) % mt.w)) & 1
+#         result |= bit << i
+#     return result & mask
 
 
-def unshift_right(mt: MT19937, y: int, shift: int, mask: int) -> int:
+# def unshift_right(mt: MT19937, y: int, shift: int, mask: int) -> int:
+#     """
+#     Unshift right
+#     """
+#     result = 0
+#     for i in range(mt.w):
+#         bit = (y >> i) & 1
+#         result |= bit << ((i - shift) % mt.w)
+#     return result & mask
+
+def get_bit(mt: MT19937, x: int, i: int) -> int:
     """
-    Unshift right
+    Gets the ith bit of x, 0-indexed from the right using the MT19937 word size
+    """
+    return (x & (1 << (mt.w - i - 1)))
+
+
+def reverse_bits(mt: MT19937, x: int) -> int:
+    """
+    Reverses the bits of x given the MT19937 word size
     """
     result = 0
+    # iterate through the bits of x
+    for _ in range(mt.w):
+        # shift the result to the left by 1
+        result <<= 1
+        if (x > 0):
+            # add the last bit of x to the result
+            result |= (x & 1)
+            # move to the next bit of x
+            x >>= 1
+    return result
+
+
+def unshift_left(mt: MT19937, y: int, a: int, b: int) -> int:
+    """
+    Reverses the left shift operation in the MT19937 algorithm (y ^= (y >> a) & b)
+    """
+    return reverse_bits(mt, unshift_right(mt, reverse_bits(mt, y), a, reverse_bits(mt, b)))
+
+
+def unshift_right(mt: MT19937, y: int, a: int, b: int) -> int:
+    """
+    Reverses the right shift operation in the MT19937 algorithm (y ^= (y << a) & b)
+    """
+    x = 0
     for i in range(mt.w):
-        bit = (y >> i) & 1
-        result |= bit << ((i - shift) % mt.w)
-    return result & mask
+        if (i < a):
+            x |= get_bit(mt, y, i)
+        else:
+            x |= (get_bit(mt, y, i) ^ (
+                (get_bit(mt, x, i - a) >> a) & get_bit(mt, b, i)))
+    return x
 
 
 def unmix_value(mt: MT19937, token: int) -> int:
     """
     Unmix a value of the MT19937 PRNG
     Apply the inverse of each transform in reverse order
+    1. Unshift right shift tempering y = y ^ (y >> self.l)
+    2. Unshift left shift tempering y = y ^ ((y << self.t) & self.c)
+    3. Unshift left shift tempering y = y ^ ((y << self.s) & self.b)
+    4. Unshift right shift tempering y = y ^ ((y >> self.u) & self.d)
     """
     y = token
     # untemper the value by applying the inverse of each transform in reverse order
-    y = unshift_right(mt, y, mt.l, ((1 << mt.w) - 1))
-    y = unshift_left(mt, y, mt.t, mt.c)
-    y = unshift_left(mt, y, mt.s, mt.b)
-    y = unshift_right(mt, y, mt.u, mt.d)
+    # y = unshift_right(mt, y, mt.l, ((1 << mt.w) - 1))
+    # y = unshift_left(mt, y, mt.t, mt.c)
+    # y = unshift_left(mt, y, mt.s, mt.b)
+    # y = unshift_right(mt, y, mt.u, mt.d)
+    y ^= (y >> mt.l)
+    y ^= (y << mt.t) & mt.c
+    y ^= ((y <<  mt.s) & mt.b) ^ ((y << 14) & 0x94284000) ^ ((y << 21) & 0x14200000) ^ ((y << 28) & 0x10000000)
+    y ^= (y >> mt.u) ^ (y >> 22)
     return y
 
 
@@ -55,11 +107,6 @@ def unmix(mt: MT19937, tokens: list[int]) -> None:
     # iterate over the internal state of the MT19937 PRNG and unmix each value
     for i in range(mt.n):
         mt.MT[i] = unmix_value(mt, tokens[i])
-        # x = (mt.MT[i] & mt.upper_mask) + (mt.MT[(i + 1) % mt.n] & mt.lower_mask)
-        # xA = x >> 1
-        # if (x % 2) != 0:
-        #     xA = xA ^ mt.a
-        # mt.MT[i] = mt.MT[(i + mt.m) % mt.n] ^ xA
     mt.index = 624 # reset index to seed the MT19937 PRNG
 
 
@@ -127,6 +174,7 @@ def break_password_reset() -> None:
 
 def main():
     break_password_reset()
+
 
 if __name__ == "__main__":
     main()
