@@ -26,8 +26,8 @@ def find_seed(output: str) -> int:
     Break seed given a 32 bit output from the MT19937 PRNG through brute force
     """
     current_time = int(time.time())
-    # test the last 1000 seconds for seed
-    for seed in range(current_time, current_time - 1000, -1):
+    # test the last 120 seconds for seed
+    for seed in range(current_time, current_time - 120, -1):
         mt = MT19937(seed.to_bytes(4, byteorder="big")) # seed the MT19937 PRNG
         if mt.extract_number() == int.from_bytes(base64_to_bytes(output), byteorder="big"): # check if output matches the PRNG output
             print("Found seed: ", seed)

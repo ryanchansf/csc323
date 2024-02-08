@@ -12,6 +12,51 @@ recreate the initial state of the generator. Using this initial state, you can c
 Demonstrate this by resetting the admin user's password and logging in as her
 """
 
+def get_bit(mt: MT19937, x: int, i: int) -> int:
+    """
+    Gets the ith bit of x, 0-indexed from the right using the MT19937 word size
+    """
+    return (x & (1 << (mt.w - i - 1)))
+
+
+def reverse_bits(mt: MT19937, x: int) -> int:
+    """
+    Reverses the bits of x given the MT19937 word size
+    """
+    result = 0
+    # iterate through the bits of x
+    for _ in range(mt.w):
+        # shift the result to the left by 1
+        result <<= 1
+        if (x > 0):
+            # add the last bit of x to the result
+            result |= (x & 1)
+            # move to the next bit of x
+            x >>= 1
+    return result
+
+
+def unshift_left(mt: MT19937, y: int, a: int, b: int) -> int:
+    """
+    Reverses the left shift operation in the MT19937 algorithm (y ^= (y >> a) & b)
+    """
+    return reverse_bits(mt, unshift_right(mt, reverse_bits(mt, y), a, reverse_bits(mt, b)))
+
+
+def unshift_right(mt: MT19937, y: int, a: int, b: int) -> int:
+    """
+    Reverses the right shift operation in the MT19937 algorithm (y ^= (y << a) & b)
+    """
+    x = 0
+    for i in range(mt.w):
+        if (i < a):
+            x |= get_bit(mt, y, i)
+        else:
+            x |= (get_bit(mt, y, i) ^ (
+                (get_bit(mt, x, i - a) >> a) & get_bit(mt, b, i)))
+    return x
+
+
 def unmix_value(mt: MT19937, token: int) -> int:
     """
     Unmix a value of the MT19937 PRNG
@@ -22,14 +67,10 @@ def unmix_value(mt: MT19937, token: int) -> int:
     4. Unshift right shift tempering y = y ^ ((y >> self.u) & self.d)
     """
     y = token
-    # untemper the value by applying the inverse of each transform in reverse order
-    y ^= (y >> mt.l) # unshift right tempering
-    y ^= (y << mt.t) & mt.c # unshift left tempering
-    # perform multiple XORs to reverse and compensate for multiple left shift temperings
-    y ^= ((y <<  mt.s) & mt.b) ^ ((y << 14) & 0x94284000) \
-                                ^ ((y << 21) & 0x14200000) \
-                                ^ ((y << 28) & 0x10000000)
-    y ^= (y >> mt.u) ^ (y >> 22)
+    y = unshift_right(mt, y, mt.l, ((1 << mt.w) - 1))
+    y = unshift_left(mt, y, mt.t, mt.c)
+    y = unshift_left(mt, y, mt.s, mt.b)
+    y = unshift_right(mt, y, mt.u, mt.d)
     return y
 
 

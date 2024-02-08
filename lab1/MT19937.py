@@ -44,7 +44,7 @@ class MT19937:
 			if self.index > self.n:
 				print("Generator was never seeded")
 				return
-			self.twist()
+			self.twist() # update the state for next generation
 
 		y = self.MT[self.index] # Extract a tempered value based on MT[index]
 		y = y ^ ((y >> self.u) & self.d) # right shift tempering
