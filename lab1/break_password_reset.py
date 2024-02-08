@@ -36,25 +36,28 @@ def reverse_bits(mt: MT19937, x: int) -> int:
     return result
 
 
-def unshift_left(mt: MT19937, y: int, a: int, b: int) -> int:
+def reverse_left(mt: MT19937, y: int, shift: int, mask: int) -> int:
     """
-    Reverses the left shift operation in the MT19937 algorithm (y ^= (y >> a) & b)
+    Reverses the left shift operation in the MT19937 algorithm (y ^= (y >> shift) & mask)
     """
-    return reverse_bits(mt, unshift_right(mt, reverse_bits(mt, y), a, reverse_bits(mt, b)))
+    return reverse_bits(mt, reverse_right(mt, reverse_bits(mt, y), shift, reverse_bits(mt, mask)))
 
 
-def unshift_right(mt: MT19937, y: int, a: int, b: int) -> int:
+def reverse_right(mt: MT19937, y: int, shift: int, mask: int) -> int:
     """
-    Reverses the right shift operation in the MT19937 algorithm (y ^= (y << a) & b)
+    Reverses the right shift operation in the MT19937 algorithm (y ^= (y << shift) & mask)
     """
-    x = 0
+    # reconstruct the original value of y
+    result = 0
     for i in range(mt.w):
-        if (i < a):
-            x |= get_bit(mt, y, i)
+        # if it's less than shift, just copy the bit
+        if (i < shift):
+            result = result | get_bit(mt, y, i)
         else:
-            x |= (get_bit(mt, y, i) ^ (
-                (get_bit(mt, x, i - a) >> a) & get_bit(mt, b, i)))
-    return x
+            # otherwise, apply the reverse of the shift and mask
+            result = result | ((get_bit(mt, y, i) ^ (
+                (get_bit(mt, result, i - shift) >> shift) & get_bit(mt, mask, i))))
+    return result
 
 
 def unmix_value(mt: MT19937, token: int) -> int:
@@ -67,10 +70,10 @@ def unmix_value(mt: MT19937, token: int) -> int:
     4. Unshift right shift tempering y = y ^ ((y >> self.u) & self.d)
     """
     y = token
-    y = unshift_right(mt, y, mt.l, ((1 << mt.w) - 1))
-    y = unshift_left(mt, y, mt.t, mt.c)
-    y = unshift_left(mt, y, mt.s, mt.b)
-    y = unshift_right(mt, y, mt.u, mt.d)
+    y = reverse_right(mt, y, mt.l, ((1 << mt.w) - 1))
+    y = reverse_left(mt, y, mt.t, mt.c)
+    y = reverse_left(mt, y, mt.s, mt.b)
+    y = reverse_right(mt, y, mt.u, mt.d)
     return y
 
 
