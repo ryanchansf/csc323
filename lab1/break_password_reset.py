@@ -12,40 +12,40 @@ recreate the initial state of the generator. Using this initial state, you can c
 Demonstrate this by resetting the admin user's password and logging in as her
 """
 
-def get_bit(mt: MT19937, x: int, i: int) -> int:
+def get_bit(mt: MT19937, val: int, i: int) -> int:
     """
-    Gets the ith bit of x, 0-indexed from the right using the MT19937 word size
+    Retrieves the ith bit of val, indexed from the right according to 32 bit word size
     """
-    return (x & (1 << (mt.w - i - 1)))
+    return (val & (1 << (mt.w - i - 1)))
 
 
-def reverse_bits(mt: MT19937, x: int) -> int:
+def reverse_bits(mt: MT19937, val: int) -> int:
     """
-    Reverses the bits of x given the MT19937 word size
+    Reverses all the bits of val
     """
     result = 0
-    # iterate through the bits of x
-    for _ in range(mt.w):
+    # iterate over the word size (bits of val)
+    for i in range(mt.w):
         # shift the result to the left by 1
         result <<= 1
-        if (x > 0):
-            # add the last bit of x to the result
-            result |= (x & 1)
-            # move to the next bit of x
-            x >>= 1
+        if (val > 0):
+            # add the last bit of val to the result
+            result |= (val & 1)
+            # shift to next bit of val
+            val >>= 1
     return result
 
 
 def reverse_left(mt: MT19937, y: int, shift: int, mask: int) -> int:
     """
-    Reverses the left shift operation in the MT19937 algorithm (y ^= (y >> shift) & mask)
+    Reverses the left shift tempering in the MT19937 algorithm (y = y ^ ((y >> shift) & mask))
     """
     return reverse_bits(mt, reverse_right(mt, reverse_bits(mt, y), shift, reverse_bits(mt, mask)))
 
 
 def reverse_right(mt: MT19937, y: int, shift: int, mask: int) -> int:
     """
-    Reverses the right shift operation in the MT19937 algorithm (y ^= (y << shift) & mask)
+    Reverses the right shift tempering in the MT19937 algorithm (y = y ^ ((y << shift) & mask))
     """
     # reconstruct the original value of y
     result = 0
