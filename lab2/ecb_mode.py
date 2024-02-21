@@ -1,7 +1,6 @@
 from Crypto.Cipher import AES
 from padding import pad, unpad
 from utils import base64_to_bytes, bytes_to_base64
-from Crypto.Util.Padding import PaddingError
 
 """
 In ECB mode, each message is divided into blocks, and each block is encrypted separately.
@@ -34,9 +33,17 @@ def ecb_decrypt(key: bytes, ciphertext: bytes) -> bytes:
     return message
   except ValueError:
     raise ValueError("Invalid ciphertext length or padding error")
-  except PaddingError:
-    raise ValueError("Padding error")
 
+
+def decrypt_ecb(key: bytes, input_file: str) -> str:
+  """
+  Decrypts a file encrypted using ECB mode of operation for a block cipher
+  """
+  with open(input_file, "r") as f:
+    ciphertext = base64_to_bytes(f.read())
+  message = ecb_decrypt(key, ciphertext)
+  return message.decode("utf-8")
+  
 
 def detect_ecb(ciphertext: bytes, block_size: int) -> bool:
   """
@@ -50,3 +57,10 @@ def create_ebc_cookie(userdata: bytes) -> bytes:
   Creates a cookie using ECB mode of operation for a block cipher
   """
   pass
+
+
+if __name__ == "__main__":
+  # Test ECB mode
+  key = "CALIFORNIA LOVE!".encode("utf-8")
+  file = "Lab2.TaskII.A.txt"
+  print(decrypt_ecb(key, file))
