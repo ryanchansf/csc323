@@ -12,7 +12,9 @@ def pad(message: bytes, block_size: int) -> bytes:
   """
   Implement a PKCS#7 padding scheme for a block cipher
   """
-  padding = block_size - len(message) % block_size
+  if block_size < 1 or block_size > 255:
+    raise ValueError("Invalid block size")
+  padding = block_size - len(message) % block_size # number of bytes to pad
   return message + bytes([padding] * padding)
   
 
@@ -22,9 +24,9 @@ def unpad(padded_message: bytes) -> bytes:
   """
   padding = padded_message[-1]
   if padding == 0 or padding > len(padded_message):
-    raise ValueError("Incorrect padding")
+    raise ValueError("Invalid padding")
   for i in range(1, padding):
     if padded_message[-i-1] != padding:
-      raise ValueError("Incorrect padding")
+      raise ValueError("Invalid padding")
   return padded_message[:-padding]
   
