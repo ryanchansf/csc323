@@ -1,6 +1,6 @@
 from Crypto.Cipher import AES
 from padding import pad, unpad
-from utils import base64_to_bytes, bytes_to_base64
+from utils import base64_to_bytes, bytes_to_base64, hex_to_bytes, bytes_to_hex
 
 """
 In ECB mode, each message is divided into blocks, and each block is encrypted separately.
@@ -49,7 +49,28 @@ def detect_ecb(ciphertext: bytes, block_size: int) -> bool:
   """
   Detects if a ciphertext was encrypted using ECB mode of operation for a block cipher
   """
-  pass
+  """
+  Lab2.TaskII.B.txt contains 100 hex-encoded encryptions of the same bitmap image. 
+  One of them has been encrypted using AES in ECB mode, while the other 99 have been 
+  encrypted using a semantically secure mode. Write some code that automatically 
+  detects ECB ciphertexts. Note that the first 54 bytes of the strings are the unencrypted 
+  BMP header, so the actual ciphertext blocks start at byte 54. When you think you’ve 
+  identified the ECB-encrypted image you can try viewing it (as an image) and see how it 
+  compares to the others.
+  """
+  
+  
+
+def identify_ecb_encrypted_image(input_file: str, block_size: int) -> int:
+  with open(input_file, "r") as file:
+      lines = file.readlines()
+
+  for i, line in enumerate(lines):
+      ciphertext = hex_to_bytes(line.strip())
+      if detect_ecb(ciphertext[54:], block_size):
+          return i
+
+  return -1
 
 
 def create_ebc_cookie(userdata: bytes) -> bytes:
@@ -60,7 +81,13 @@ def create_ebc_cookie(userdata: bytes) -> bytes:
 
 
 if __name__ == "__main__":
-  # Test ECB mode
-  key = "CALIFORNIA LOVE!".encode("utf-8")
-  file = "Lab2.TaskII.A.txt"
-  print(decrypt_ecb(key, file))
+  # # Test ECB mode
+  # key = "CALIFORNIA LOVE!".encode("utf-8")
+  # file = "Lab2.TaskII.A.txt"
+  # print(decrypt_ecb(key, file))
+
+  # Identify ECB mode
+  file = "Lab2.TaskII.B.txt"
+  block_size = 16
+  num = identify_ecb_encrypted_image(file, block_size)
+  print(num)
