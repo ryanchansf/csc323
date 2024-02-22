@@ -36,7 +36,7 @@ def cbc_decrypt(key: bytes, iv: bytes, ciphertext: bytes) -> bytes:
     decrypted_block = cipher.decrypt(block)
     decrypted_block = bytes([a ^ b for a, b in zip(decrypted_block, previous_block)])  # XOR with previous block
     decrypted_message += decrypted_block
-    previous_block = block
+    previous_block = block # previous block set to previous cipher text
 
   decrypted_message = unpad(decrypted_message)
 

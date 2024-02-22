@@ -3,10 +3,12 @@ from utils import hex_to_bytes, bytes_to_hex
 
 URL = "http://localhost:8080"
 credentials_1 = {
+        # block 2 starts with admin and then correct padding
         "user": "0" * 11 + "admin" + chr(0) * 10 + chr(11),
         "password": "password"
     }
 credentials_2 = {
+        # align role= to end of block 2 so admin will be block 3
         "user": "0" * 11 + "0" * 4,
         "password": "password"
     }
