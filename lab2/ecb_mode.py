@@ -58,18 +58,22 @@ def detect_ecb(ciphertext: bytes, block_size: int) -> bool:
   identified the ECB-encrypted image you can try viewing it (as an image) and see how it 
   compares to the others.
   """
-  
-  
+  # split the ciphertext into blocks
+  blocks = [ciphertext[i : i + block_size] for i in range(0, len(ciphertext), block_size)]
+  # check if any blocks are repeated
+  return len(blocks) != len(set(blocks))
+
 
 def identify_ecb_encrypted_image(input_file: str, block_size: int) -> int:
   with open(input_file, "r") as file:
-      lines = file.readlines()
+    lines = file.readlines()
 
   for i, line in enumerate(lines):
-      ciphertext = hex_to_bytes(line.strip())
-      if detect_ecb(ciphertext[54:], block_size):
-          return i
-
+    ciphertext = hex_to_bytes(line.strip())
+    if detect_ecb(ciphertext[54:], block_size):
+      with open("image.bmp", "wb") as f:
+        f.write(ciphertext)
+      return i + 1
   return -1
 
 
@@ -81,13 +85,12 @@ def create_ebc_cookie(userdata: bytes) -> bytes:
 
 
 if __name__ == "__main__":
-  # # Test ECB mode
-  # key = "CALIFORNIA LOVE!".encode("utf-8")
-  # file = "Lab2.TaskII.A.txt"
-  # print(decrypt_ecb(key, file))
+  # Test ECB mode
+  key = "CALIFORNIA LOVE!".encode("utf-8")
+  file = "Lab2.TaskII.A.txt"
+  print(decrypt_ecb(key, file))
 
   # Identify ECB mode
   file = "Lab2.TaskII.B.txt"
-  block_size = 16
-  num = identify_ecb_encrypted_image(file, block_size)
-  print(num)
+  block_size = AES.block_size
+  print("ECB message found at line:", identify_ecb_encrypted_image(file, block_size))
