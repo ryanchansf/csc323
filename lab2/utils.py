@@ -4,15 +4,14 @@ def bytes_to_hex(byte_string):
     """
     Encodes a string of bytes to a hex-encoded ASCII string
     """
-    hex_string = byte_string.hex()
-    return hex_string
+    return byte_string.hex()
+
 
 def hex_to_bytes(hex_string):
     """
     Decodes a hex-encoded ASCII string to a string of bytes
     """
-    byte_string = bytes.fromhex(hex_string)
-    return byte_string
+    return bytes.fromhex(hex_string)
 
 def base64_to_bytes(base64_string):
     """
