@@ -1,50 +1,34 @@
 import requests
-
 from utils import hex_to_bytes, bytes_to_hex
 
-
 URL = "http://localhost:8080"
-STR_COOKIE_NAME = "auth_token"
-
-
-def register(payload):
-    with requests.Session() as s:
-        s.post(URL+"/register", params=payload)
-
-
-def access_cookie(payload):
-    with requests.Session() as s:
-        s.post(URL, data=payload)
-        return s.cookies[STR_COOKIE_NAME]
-
-
-def login_home(auth_token):
-    with requests.Session() as s:
-        r = s.get(URL+"/home", cookies={STR_COOKIE_NAME: auth_token})
-        return r.text
-
-
-def break_security():
-    payload_admin_full_block = {
+credentials_1 = {
         "user": "0" * 11 + "admin" + chr(0) * 10 + chr(11),
-        "password": "123"
+        "password": "password"
     }
-    payload_role_full_block = {
+credentials_2 = {
         "user": "0" * 11 + "0" * 4,
-        "password": "123"
+        "password": "password"
     }
-    register(payload_admin_full_block)
-    register(payload_role_full_block)
-    token_admin_full_block = hex_to_bytes(access_cookie(payload_admin_full_block))
-    token_role_full_block = hex_to_bytes(access_cookie(payload_role_full_block))
 
-    result = token_role_full_block[:32] + token_admin_full_block[16:32]
-    return result
+def get_admin_cookie():
+    with requests.Session() as s:
+        # register users
+        s.post(URL+"/register", params=credentials_1)
+        s.post(URL+"/register", params=credentials_2)
+        # get cookies
+        s.post(URL, data=credentials_1)
+        block_1 = hex_to_bytes(s.cookies["auth_token"])
+        s.post(URL, data=credentials_2)
+        block_2 = hex_to_bytes(s.cookies["auth_token"])
+        # return the cookie with the admin role
+        return block_2[:32] + block_1[16:32]
 
 
-def main():
-    token = break_security()
-    print(login_home(bytes_to_hex(token)))
+def break_ecb():
+    with requests.Session() as s:
+        r = s.get(URL+"/home", cookies={"auth_token": bytes_to_hex(get_admin_cookie())})
+        print(r.text)
 
 if __name__ == "__main__":
-    main()
+    break_ecb()
