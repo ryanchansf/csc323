@@ -26,3 +26,12 @@ def bytes_to_base64(byte_string):
     """
     base64_string = base64.b64encode(byte_string).decode("utf-8")
     return base64_string
+
+def xor(byte_string, key):
+    """
+    XORs two byte strings together
+    """
+    result = b""
+    for i in range(len(byte_string)):
+        result += bytes([byte_string[i] ^ key[i % len(key)]])
+    return result
