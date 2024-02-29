@@ -17,16 +17,6 @@ class EllipticCurve:
         self.f = f
 
 
-def point_doubling(p: Point, ec: EllipticCurve) -> Point:
-    """
-    Takes in a point and an elliptic curve and returns the doubling of the point.
-    """
-    m = (3 * p.x**2 + ec.a) / (2 * p.y)
-    x = (m**2 - 2 * p.x) % ec.f
-    y = (m * (p.x - x) - p.y) % ec.f
-    return Point(x, y)
-
-
 def point_addition(p: Point, q: Point, ec: EllipticCurve) -> Point:
     """
     Takes in two points and an elliptic curve and returns the sum of the two points.
@@ -65,11 +55,13 @@ def point_multiplication(p: Point, n: int, ec: EllipticCurve) -> Point:
     7.  n ← n div 2
     8. until n = 0
     """
-    r = Point(float("inf"), float("inf"))
+    r = Point(0, 0)
     while n > 0:
-        if n % 2 == 1:
+        if pow(n, 1, 2) == 1:
+            # add p to r
             r = point_addition(r, p, ec)
-        p = point_doubling(p, ec)
+        # double p
+        p = point_addition(p, p, ec)
         n = n // 2
     return r
 
@@ -78,6 +70,8 @@ if __name__ == "__main__":
     ec = EllipticCurve(3, 8, 13)
     p = Point(9, 7)
     q = Point(1, 8)
-    print(point_addition(p, q, ec).x, point_addition(p, q, ec).y)
-    # n = 5
-    # print(point_multiplication(p, n, ec).x, point_multiplication(p, n, ec).y)
+    print(point_addition(p, q, ec))
+    
+    n = 5
+    print(point_multiplication(p, 5, ec))
+    
