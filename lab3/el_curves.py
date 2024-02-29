@@ -2,13 +2,19 @@ class Point:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y
+
+    def __repr__(self):
+        return f"Point({self.x}, {self.y})"
   
         
 class EllipticCurve:
-    def __init__(self, a, b, p):
+    def __init__(self, a, b, f):
         self.a = a
         self.b = b
-        self.p = p
+        self.f = f
 
 
 def point_doubling(p: Point, ec: EllipticCurve) -> Point:
@@ -16,8 +22,8 @@ def point_doubling(p: Point, ec: EllipticCurve) -> Point:
     Takes in a point and an elliptic curve and returns the doubling of the point.
     """
     m = (3 * p.x**2 + ec.a) / (2 * p.y)
-    x = (m**2 - 2 * p.x) % ec.p
-    y = (m * (p.x - x) - p.y) % ec.p
+    x = (m**2 - 2 * p.x) % ec.f
+    y = (m * (p.x - x) - p.y) % ec.f
     return Point(x, y)
 
 
@@ -26,14 +32,23 @@ def point_addition(p: Point, q: Point, ec: EllipticCurve) -> Point:
     Takes in two points and an elliptic curve and returns the sum of the two points.
     """
     # point at infinity
-    if p.x == q.x and p.y == q.y:
-        return point_doubling(p, ec)
+    if q == Point(0, 0):
+        return p
+    elif p == Point(0, 0):
+        return q
     # vertical line
-    if p.x == q.x and p.y != q.y:
-        return Point(float("inf"), float("inf"))
-    m = (q.y - p.y) / (q.x - p.x)
-    x = (m**2 - p.x - q.x) % ec.p
-    y = (m * (x - p.x) + p.y) % ec.p
+    elif p.x == q.x and p.y != q.y:
+        return Point(0, 0)
+    # different points
+    elif p != q:
+        # find slope of the line between points
+        m = (q.y - p.y) * pow(q.x - p.x, -1, ec.f)
+    else:
+        # find slope of the tangent line
+        m = (3 * pow(p.x, 2, ec.f) + ec.a) * pow(2 * p.y, -1, ec.f)
+    m = pow(m, 1, ec.f)
+    x = pow((pow(m, 2, ec.f) - p.x - q.x), 1, ec.f)
+    y = pow((m * (p.x - x) - p.y), 1, ec.f)
     return Point(x, y)
 
 
