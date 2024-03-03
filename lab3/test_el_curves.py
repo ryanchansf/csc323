@@ -56,6 +56,33 @@ class TestElCurves(unittest.TestCase):
         expected = Point(9, 7)
         self.assertEqual(actual, expected)
         
+    def test_tonnelli_shanks(self):
+        n = 3
+        p = 13
+        actual = tonnelli_shanks(n, p)
+        expected = 9
+        self.assertEqual(actual, expected)
+        
+    def test_tonnelli_shanks_1(self):
+        n = 5
+        p = 13
+        actual = tonnelli_shanks(n, p)
+        expected = -1
+        self.assertEqual(actual, expected)
+        
+    def test_tonnelli_shanks_2(self):
+        n = 44
+        p = 83
+        actual = tonnelli_shanks(n, p)
+        expected = 25
+        self.assertEqual(actual, expected)
+        
+    def test_random_point(self):
+        p = random_point(self.curve)
+        left = pow(p.y, 2, self.curve.f)
+        right = pow(pow(p.x, 3) + self.curve.a * p.x + self.curve.b, 1, self.curve.f)
+        self.assertEqual(left, right)
+        
         
 if __name__ == "__main__":
     unittest.main()
