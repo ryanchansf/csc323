@@ -136,7 +136,7 @@ def random_point(ec: EllipticCurve) -> Point:
     return Point(x, y)
 
 
-def find_order(ec: EllipticCurve, order: int, desired: int) -> Point:
+def random_point_order(ec: EllipticCurve, order: int, desired: int) -> Point:
     """
     Returns a point on the curve with the desired order.
     : param ec: the elliptic curve
@@ -155,14 +155,14 @@ def find_order(ec: EllipticCurve, order: int, desired: int) -> Point:
         Going forward, we'll say that the order of m divides a
     - The same holds true for points on a curve, with the Origin as our identity (replacing 0)
     """
-    # find a random point
-    p = random_point(ec)
-    # find the order of the point
-    m = point_multiplication(p, (order // desired), ec)
-    # pow(point_multiplication(m, desired, ec), 1, order) == Point(0, 0)
-    if m == Point(0, 0):
-        return m
-    return find_order(ec, order, desired)
+    for i in range(100):
+        # find a random point
+        p = random_point(ec)
+        # find the order of the point
+        m = point_multiplication(p, (order // desired), ec)
+        if m != Point(0, 0):
+            return m
+    return None
 
 
 if __name__ == "__main__":

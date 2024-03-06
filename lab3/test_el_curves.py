@@ -84,14 +84,16 @@ class TestElCurves(unittest.TestCase):
         self.assertEqual(left, right)
         
     def test_find_order(self):
-        p = find_order(self.curve, 9, 3)
-        r = point_multiplication(p, 3, self.curve)
-        self.assertEqual(r, Point(0, 0))
+        desired = 3
+        m = random_point_order(self.curve, 9, desired)
+        o = point_multiplication(m, desired, self.curve)
+        self.assertEqual(o, Point(0, 0))
         
     def test_find_order_2(self):
-        p = find_order(self.curve, 12, 4)
-        r = point_multiplication(p, 4, self.curve)
-        self.assertEqual(r, p)
+        desired = 9
+        m = random_point_order(self.curve, 9, desired)
+        o = point_multiplication(m, desired, self.curve)
+        self.assertEqual(o, Point(0, 0))
         
 if __name__ == "__main__":
     unittest.main()
