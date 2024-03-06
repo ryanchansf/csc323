@@ -83,11 +83,15 @@ class TestElCurves(unittest.TestCase):
         right = pow(pow(p.x, 3) + self.curve.a * p.x + self.curve.b, 1, self.curve.f)
         self.assertEqual(left, right)
         
-    # def test_find_order(self):
-    #     ec = EllipticCurve(95051, 11279326, 233970423115425145524320034830162017933)
-    #     order = find_order(ec, 8, 4)
-    #     self.assertEqual(order, 4)
+    def test_find_order(self):
+        p = find_order(self.curve, 9, 3)
+        r = point_multiplication(p, 3, self.curve)
+        self.assertEqual(r, Point(0, 0))
         
+    def test_find_order_2(self):
+        p = find_order(self.curve, 12, 4)
+        r = point_multiplication(p, 4, self.curve)
+        self.assertEqual(r, p)
         
 if __name__ == "__main__":
     unittest.main()

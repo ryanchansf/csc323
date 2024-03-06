@@ -136,7 +136,7 @@ def random_point(ec: EllipticCurve) -> Point:
     return Point(x, y)
 
 
-def find_order(ec: EllipticCurve, order: int, desired: int) -> int:
+def find_order(ec: EllipticCurve, order: int, desired: int) -> Point:
     """
     Returns a point on the curve with the desired order.
     : param ec: the elliptic curve
@@ -161,7 +161,7 @@ def find_order(ec: EllipticCurve, order: int, desired: int) -> int:
     m = point_multiplication(p, (order // desired), ec)
     # pow(point_multiplication(m, desired, ec), 1, order) == Point(0, 0)
     if m == Point(0, 0):
-        return desired
+        return m
     return find_order(ec, order, desired)
 
 
