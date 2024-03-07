@@ -3,7 +3,7 @@ import unittest
 
 class TestElCurves(unittest.TestCase):
     def setUp(self):
-        self.curve = EllipticCurve(3, 8, 13)
+        self.curve = EllipticCurve(3, 8, 13, 9)
     
     # point addition tests
     def test_add(self):
@@ -85,13 +85,13 @@ class TestElCurves(unittest.TestCase):
         
     def test_find_order(self):
         desired = 3
-        m = random_point_order(self.curve, 9, desired)
+        m = random_point_order(self.curve, desired)
         o = point_multiplication(m, desired, self.curve)
         self.assertEqual(o, Point(0, 0))
         
     def test_find_order_2(self):
         desired = 9
-        m = random_point_order(self.curve, 9, desired)
+        m = random_point_order(self.curve, desired)
         o = point_multiplication(m, desired, self.curve)
         self.assertEqual(o, Point(0, 0))
         
