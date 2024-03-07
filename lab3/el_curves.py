@@ -20,10 +20,11 @@ class Point:
   
         
 class EllipticCurve:
-    def __init__(self, a, b, f):
+    def __init__(self, a:int, b:int, f:int, o:int):
         self.a = a
         self.b = b
         self.f = f
+        self.o = o
 
 
 def point_addition(p: Point, q: Point, ec: EllipticCurve) -> Point:
@@ -143,7 +144,7 @@ def random_point(ec: EllipticCurve) -> Point:
     return Point(x, y)
 
 
-def random_point_order(ec: EllipticCurve, order: int, desired: int) -> Point:
+def random_point_order(ec: EllipticCurve, desired: int) -> Point:
     """
     Returns a point on the curve with the desired order.
     : param ec: the elliptic curve
@@ -166,7 +167,7 @@ def random_point_order(ec: EllipticCurve, order: int, desired: int) -> Point:
         # find a random point
         p = random_point(ec)
         # find the order of the point
-        m = point_multiplication(p, (order // desired), ec)
+        m = point_multiplication(p, (ec.o // desired), ec)
         if m != Point(0, 0):
             return m
     return None
