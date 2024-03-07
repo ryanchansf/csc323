@@ -20,53 +20,91 @@ class EllipticCurve:
         self.f = f
 
 
-def point_addition(p: Point, q: Point, ec: EllipticCurve) -> Point:
-    """
-    Takes in two points and an elliptic curve and returns the sum of the two points.
-    """
-    # point at infinity
-    if q == Point(0, 0):
-        return p
-    elif p == Point(0, 0):
-        return q
-    # vertical line, opposite y coordinates
-    elif p.x == q.x and pow(p.y + q.y, 1, ec.f) == 0:
-        return Point(0, 0)
-    # different points
-    elif p != q:
-        # find slope of the line between points
-        m = (q.y - p.y) * pow(q.x - p.x, -1, ec.f)
-    else:
-        # find slope of the tangent line
-        m = (3 * pow(p.x, 2, ec.f) + ec.a) * pow(2 * p.y, -1, ec.f)
-    m = pow(m, 1, ec.f)
-    x = pow((pow(m, 2, ec.f) - p.x - q.x), 1, ec.f)
-    y = pow((m * (p.x - x) - p.y), 1, ec.f)
-    return Point(x, y)
+def point_addition(p: Point, q: Point, curve: EllipticCurve) -> Point:
+        """
+        Perform point addition between two points p and q on the elliptic curve
+        """
+        if p == Point(0, 0):
+            # if p is the point at infinity, return q
+            return q
+        if q == Point(0, 0):
+            # if q is the point at infinity, return p
+            return p
+        if p.x == q.x and pow(p.y + q.y, 1, curve.f) == 0:
+            # if p and q have the same x coordinate and opposite y coordinates, return the point at infinity
+            return Point(0, 0)
+        if p != q:
+            # if p and q are different points, calculate the slope of the line between them
+            m = (q.y - p.y) * pow(q.x - p.x, -1, curve.f)
+        else:
+            # if p and q are the same point, calculate the slope of the tangent line
+            m = (3 * pow(p.x, 2, curve.f) + curve.a) * \
+                pow(2 * p.y, -1, curve.f)
+        m = pow(m, 1, curve.f)
+        # calculate the x and y coordinates of the resulting point
+        x = pow((pow(m, 2, curve.f) - p.x - q.x), 1, curve.f)
+        y = pow((m * (p.x - x) - p.y), 1, curve.f)
+        return Point(x, y)
 
-
-def point_multiplication(p: Point, n: int, ec: EllipticCurve) -> Point:
+def point_multiplication(p: Point, n: int, curve: EllipticCurve) -> Point:
     """
-    Takes in a point and a scalar and utilizes the double-add algorithm to return the product of the point and the scalar.
-    Pseudocode:
-    1. R ← O
-    2. repeat
-    3.  if n mod 2 == 1 then
-    4.     R ← R + p
-    5.  end if
-    6.  p ← 2g
-    7.  n ← n div 2
-    8. until n = 0
+    Perform point multiplication between a point p and a scalar n using the double-and-add algorithm
     """
     r = Point(0, 0)
     while n > 0:
-        if pow(n, 1, 2) == 1:
-            # add p to r
-            r = point_addition(r, p, ec)
-        # double p
-        p = point_addition(p, p, ec)
-        n = n // 2
+        if n & 1:
+            r = point_addition(r, p, curve)
+        n >>= 1
+        p = point_addition(p, p, curve)
     return r
+
+# def point_addition(p: Point, q: Point, ec: EllipticCurve) -> Point:
+#     """
+#     Takes in two points and an elliptic curve and returns the sum of the two points.
+#     """
+#     # point at infinity
+#     if q == Point(0, 0):
+#         return p
+#     elif p == Point(0, 0):
+#         return q
+#     # vertical line, opposite y coordinates
+#     elif p.x == q.x and pow(p.y + q.y, 1, ec.f) == 0:
+#         return Point(0, 0)
+#     # different points
+#     elif p != q:
+#         # find slope of the line between points
+#         m = (q.y - p.y) * pow(q.x - p.x, -1, ec.f)
+#     else:
+#         # find slope of the tangent line
+#         m = (3 * pow(p.x, 2, ec.f) + ec.a) * pow(2 * p.y, -1, ec.f)
+#     m = pow(m, 1, ec.f)
+#     x = pow((pow(m, 2, ec.f) - p.x - q.x), 1, ec.f)
+#     y = pow((m * (p.x - x) - p.y), 1, ec.f)
+#     return Point(x, y)
+
+
+# def point_multiplication(p: Point, n: int, ec: EllipticCurve) -> Point:
+#     """
+#     Takes in a point and a scalar and utilizes the double-add algorithm to return the product of the point and the scalar.
+#     Pseudocode:
+#     1. R ← O
+#     2. repeat
+#     3.  if n mod 2 == 1 then
+#     4.     R ← R + p
+#     5.  end if
+#     6.  p ← 2g
+#     7.  n ← n div 2
+#     8. until n = 0
+#     """
+#     r = Point(0, 0)
+#     while n > 0:
+#         if pow(n, 1, 2) == 1:
+#             # add p to r
+#             r = point_addition(r, p, ec)
+#         # double p
+#         p = point_addition(p, p, ec)
+#         n = n // 2
+#     return r
 
 
 def tonnelli_shanks(n: int, p: int) -> int:

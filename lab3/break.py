@@ -3,15 +3,14 @@ import requests
 from bs4 import BeautifulSoup
 from Crypto.Hash import HMAC, SHA256
 
-def calculate_hmac(message: str, key: Point) -> str:
-    hmac = HMAC.new(str(key).encode(), digestmod=SHA256)
+def calculate_hmac(message: str, shared_key: Point) -> str:
+    hmac = HMAC.new(str(shared_key).encode(), digestmod=SHA256)
     hmac.update(message.encode())
     return hmac.hexdigest()
 
 
 def request_server(message: str, hmac: str, p_key: Point, recipient: str) -> str:
     url = "http://localhost:8080/submit"
-    print(type(p_key))
     data = {
         "recipient": recipient,
         "message": message,
@@ -31,6 +30,10 @@ def secret_key_mod_8(server_hmac: str, message: str, p_key: Point, curve: Ellipt
     """
     Given the public key and message, use brute force to find the secret key mod 8.
     """
+    print("server_hmac:", server_hmac)
+    print("message:", message)
+    print("p_key:", p_key)
+    print("key", point_multiplication(p_key, 2, curve))
     try:
         for i in range(8):
             # generate different shared keys by multiplying the p_key by different scalers in range 8
@@ -39,6 +42,7 @@ def secret_key_mod_8(server_hmac: str, message: str, p_key: Point, curve: Ellipt
             print("HMAC:", hmac)
             if hmac == server_hmac:
                 return i
+        return -1
     except ValueError:
         raise ValueError("Secret key mod 8 not found")
 
@@ -73,3 +77,4 @@ if __name__ == "__main__":
     curve = EllipticCurve(-95051, 11279326, 233970423115425145524320034830162017933)
     base_point_order = 29246302889428143187362802287225875743
     print(find_admin_key(curve, base_point_order))
+    print(calculate_hmac("1", Point(1, 1)))
