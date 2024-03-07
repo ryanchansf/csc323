@@ -30,10 +30,6 @@ def secret_key_mod_8(server_hmac: str, message: str, p_key: Point, curve: Ellipt
     """
     Given the public key and message, use brute force to find the secret key mod 8.
     """
-    print("server_hmac:", server_hmac)
-    print("message:", message)
-    print("p_key:", p_key)
-    print("key", point_multiplication(p_key, 2, curve))
     try:
         for i in range(8):
             # generate different shared keys by multiplying the p_key by different scalers in range 8
@@ -44,7 +40,7 @@ def secret_key_mod_8(server_hmac: str, message: str, p_key: Point, curve: Ellipt
                 return i
         return -1
     except ValueError:
-        raise ValueError("Secret key mod 8 not found")
+        raise ValueError("Secret key mod 8 error")
 
 
 def find_admin_key(curve: EllipticCurve, base_point_order: int) -> str:
@@ -59,7 +55,6 @@ def find_admin_key(curve: EllipticCurve, base_point_order: int) -> str:
     recipient = "Admin"
     message = "Hello, Admin!"
     hmac = calculate_hmac(message, sh_key)
-    print("HMAC:", hmac)
     
     # server hmac corresponds to the message and shared key
     admin_message, server_hmac = request_server(message, hmac, p_key, recipient)
@@ -77,4 +72,4 @@ if __name__ == "__main__":
     curve = EllipticCurve(-95051, 11279326, 233970423115425145524320034830162017933)
     base_point_order = 29246302889428143187362802287225875743
     print(find_admin_key(curve, base_point_order))
-    print(calculate_hmac("1", Point(1, 1)))
+    
