@@ -1,4 +1,5 @@
 import random
+from math import gcd
 
 class Point:
     def __init__(self, x, y):
@@ -28,8 +29,8 @@ def point_addition(p: Point, q: Point, ec: EllipticCurve) -> Point:
         return p
     elif p == Point(0, 0):
         return q
-    # vertical line
-    elif p.x == q.x and p.y != q.y:
+    # vertical line, opposite y coordinates
+    elif p.x == q.x and pow(p.y + q.y, 1, ec.f) == 0:
         return Point(0, 0)
     # different points
     elif p != q:
