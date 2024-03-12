@@ -78,11 +78,89 @@ class ZachCoinClient (Node):
         print("node is requested to stop!")
 
 
-def create_transaction():
-    pass
+def get_input_block(client: ZachCoinClient):
+    """
+    Get the input block for a new transaction
+    """
+    # user picks block from blockchain
+    print("\nChoose a block from the blockchain to use as input:")
+    print("\n" + "-" * 20)
+    for i, block in enumerate(client.blockchain):
+        print(f"Block {i}:")
+        print("-" * 20)
+        print(json.dumps(block, indent=4))
+        print("-" * 20)
+    x = input("Which block would you like to use? Enter the corresponding number -> ")
+    try:
+        x = int(x)
+        
+        # verify that the block exists
+        if x < 0 or x >= len(client.blockchain):
+            print("Error: Invalid block number.")
+            return None
+    except:
+        print("Error: Invalid block number.")
+        return None
+    
+    block = client.blockchain[x]
+    
+    # user picks transaction output from block
+    print("\nChoose a transaction output from the block to use as input:")
+    for i, tx in enumerate(block["tx"]["output"]):
+        print(f"Output {i}:")
+        print("-" * 20)
+        print(json.dumps(tx, indent=4))
+        print("-" * 20)
+    n = input("Which output would you like to use? Enter the corresponding number -> ")
+    try:
+        n = int(n)
+        
+        # verify that the output exists
+        if n < 0 or n >= len(block["tx"]["output"]):
+            print("Error: Invalid output number.")
+            return None
+    except:
+        print("Error: Invalid output number.")
+        return None
+    
+    return {
+        "id": block["id"],
+        "n": n
+    }
 
 
-def mine_transaction():
+def create_transaction(client: ZachCoinClient, sk: SigningKey):
+    """
+    Create a transaction and add it to the unverified transaction pool
+    
+    Format of an unverified transaction (UTX):
+    utx = {
+        'type': TRANSACTION,
+        'input': {
+            'id': BLOCK_ID,
+            'n': n
+        },
+        'sig': ECDSA_SIGNATURE,
+        'output': [
+            {
+                'value': amount,
+                'pub_key': ECDSA_PUBLIC_KEY
+            },
+            {
+                'value': amount,
+                'pub_key': ECDSA_PUBLIC_KEY
+            }
+        ]
+    }
+    """
+    input_info = get_input_block(client)
+    input_id = input_info["id"]
+    input_n = input_info["n"]
+    print("Input block:", input_id)
+    print("Output number:", input_n)
+
+
+def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
     pass
     
 
@@ -123,6 +201,7 @@ def main():
     print("Starting ZachCoin™ Client:", sys.argv[1])
     time.sleep(2)
 
+    # Command menu
     while True:
         os.system('cls' if os.name=='nt' else 'clear')
         slogan = " You can't spell \"It's a Ponzi scheme!\" without \"ZachCoin\" "
@@ -157,9 +236,9 @@ def main():
         
         # create transaction
         elif x == 3:
-            create_transaction()
+            create_transaction(client, sk)
         elif x == 4:
-            mine_transaction()
+            mine_transaction(client, vk)
         # quit
         elif x == 9:
             client.stop()
