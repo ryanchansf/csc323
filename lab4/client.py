@@ -76,6 +76,30 @@ class ZachCoinClient (Node):
         
     def node_request_to_stop(self):
         print("node is requested to stop!")
+        
+    def transaction(self, sk: SigningKey, input_id: str, input_n: int, recipients: list[str], amounts: list[int]) -> dict:
+        """
+        Create a new unverified transaction
+        """
+        # generate outputs
+        outputs = [{"value": amount, "pub_key": recipient} for recipient, amount in zip(recipients, amounts)]
+        
+        # format input
+        input_obj = {
+            "id": input_id,
+            "n": input_n
+        }
+        
+        # sign transaction
+        signature = sk.sign(json.dumps(input_obj).encode("utf-8")).hex()
+        
+        utx = {
+            "type": self.TRANSACTION,
+            "input": input_obj,
+            "sig": signature,
+            "output": outputs
+        }
+        return utx
 
 
 def get_input_block(client: ZachCoinClient):
@@ -127,37 +151,52 @@ def get_input_block(client: ZachCoinClient):
         "id": block["id"],
         "n": n
     }
+    
+    
+def get_recipient(change: bool = False):
+    """
+    Get the recipient and amount for a new transaction
+    """
+    if change:
+        print("\nOptional: Enter a second recipient to receive change. \
+              Leave blank to skip.")
+        
+    recipient = input("Enter the recipient's public key -> ")
+    amount = input("Enter the amount to send -> ")
+    try:
+        amount = int(amount)
+        if amount <= 0:
+            print("Error: Invalid amount.")
+            return None, None
+    except:
+        print("Error: Invalid amount.")
+        return None, None
+    return recipient, amount
 
 
 def create_transaction(client: ZachCoinClient, sk: SigningKey):
     """
     Create a transaction and add it to the unverified transaction pool
-    
-    Format of an unverified transaction (UTX):
-    utx = {
-        'type': TRANSACTION,
-        'input': {
-            'id': BLOCK_ID,
-            'n': n
-        },
-        'sig': ECDSA_SIGNATURE,
-        'output': [
-            {
-                'value': amount,
-                'pub_key': ECDSA_PUBLIC_KEY
-            },
-            {
-                'value': amount,
-                'pub_key': ECDSA_PUBLIC_KEY
-            }
-        ]
-    }
     """
+    # get input block
     input_info = get_input_block(client)
     input_id = input_info["id"]
     input_n = input_info["n"]
     print("Input block:", input_id)
     print("Output number:", input_n)
+    
+    # parse recipient and amount
+    recipient, amount = get_recipient()
+    # optional second output for change
+    self_recipient, change = get_recipient(change=True)
+    
+    recipients = [recipient] + ([self_recipient] if self_recipient else [])
+    amounts = [int(amount)] + ([int(change)] if change else [])
+    
+    utx = client.transaction(sk, input_id, input_n, recipients, amounts)
+    
+    print("Creating transaction...", json.dumps(utx, indent=1))
+    client.send_to_nodes(utx)
 
 
 def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
@@ -237,6 +276,7 @@ def main():
         # create transaction
         elif x == 3:
             create_transaction(client, sk)
+        # mine transaction
         elif x == 4:
             mine_transaction(client, vk)
         # quit
