@@ -7,7 +7,7 @@ SERVER_PORT = 9067
 
 class ZachCoinClient (Node):
     
-    #ZachCoin Constants
+    # ZachCoin Constants
     BLOCK = 0
     TRANSACTION = 1
     BLOCKCHAIN = 2
@@ -15,7 +15,7 @@ class ZachCoinClient (Node):
     COINBASE = 50
     DIFFICULTY = 0x0000007FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
-    #Hardcoded gensis block
+    # Hardcoded genesis block
     blockchain = [
         {
             "type": BLOCK,
@@ -39,6 +39,7 @@ class ZachCoinClient (Node):
             }
         }
     ]
+    # unverified transaction pool
     utx = []
   
     def __init__(self, host, port, id=None, callback=None, max_connections=0):
@@ -77,13 +78,21 @@ class ZachCoinClient (Node):
         print("node is requested to stop!")
 
 
+def create_transaction():
+    pass
+
+
+def mine_transaction():
+    pass
+    
+
 def main():
 
     if len(sys.argv) < 3:
         print("Usage: python3", sys.argv[0], "CLIENTNAME PORT")
         quit()
 
-    #Load keys, or create them if they do not yet exist
+    # Load keys, or create them if they do not yet exist
     keypath = './' + sys.argv[1] + '.key'
     if not os.path.exists(keypath):
         sk = SigningKey.generate()
@@ -99,7 +108,7 @@ def main():
             except Exception as e:
                 print("Couldn't read key file", e)
 
-    #Create a client object
+    # Create a client object
     client = ZachCoinClient("127.0.0.1", int(sys.argv[2]), sys.argv[1])
     client.debug = False
 
@@ -109,7 +118,7 @@ def main():
 
     time.sleep(1)
 
-    #Connect to server 
+    # Connect to server 
     client.connect_with_node(SERVER_ADDR, SERVER_PORT)
     print("Starting ZachCoin™ Client:", sys.argv[1])
     time.sleep(2)
@@ -120,7 +129,16 @@ def main():
         print("=" * (int(len(slogan)/2) - int(len(' ZachCoin™')/2)), 'ZachCoin™', "=" * (int(len(slogan)/2) - int(len('ZachCoin™ ')/2)))
         print(slogan)
         print("=" * len(slogan),'\n')
-        x = input("\t0: Print keys\n\t1: Print blockchain\n\t2: Print UTX pool\n\nEnter your choice -> ")
+        x = input("""
+        0: Print keys
+        1: Print blockchain
+        2: Print UTX pool
+        3: Create transaction
+        4: Mine transaction
+        
+        9: Quit
+
+        Enter your choice -> """)
         try:
             x = int(x)
         except:
@@ -136,6 +154,16 @@ def main():
             print(json.dumps(client.utx, indent=1))
         # TODO: Add options for creating and mining transactions
         # as well as any other additional features
+        
+        # create transaction
+        elif x == 3:
+            create_transaction()
+        elif x == 4:
+            mine_transaction()
+        # quit
+        elif x == 9:
+            client.stop()
+            break
 
         input()
         
