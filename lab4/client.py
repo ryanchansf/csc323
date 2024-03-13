@@ -1,6 +1,9 @@
 import sys, time, json, os
 from ecdsa import VerifyingKey, SigningKey
 from p2pnetwork.node import Node
+from Crypto import Random
+import hashlib
+from Crypto.Cipher import AES
 
 SERVER_ADDR = "zachcoin.net"
 SERVER_PORT = 9067
@@ -199,9 +202,59 @@ def create_transaction(client: ZachCoinClient, sk: SigningKey):
     client.send_to_nodes(utx)
 
 
+
+
+
 def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
-    pass
-    
+    # check if there are any transactions to mine
+    if len(client.utx) == 0:
+        print("Error: No unverified transactions in pool to mine.")
+        return
+    # prompt user to select a transaction to mine
+    print("Select an unverified transaction from the UTX pool:")
+    for i, utx in enumerate(client.utx):
+        print(f"-------- {i} --------\n{json.dumps(utx, indent=1)}")
+    x = input("Enter the number of the transaction -> ")
+    try:
+        x = int(x)
+    except:
+        print("Error: Invalid transaction number.")
+        return None
+
+    # check if transaction number is valid
+    if x < 0 or x >= len(client.utx):
+        print("Error: Invalid transaction number.")
+        return None
+    utx =  client.utx[x]
+
+    # get previous block
+    prev = client.blockchain[-1]['id']
+    client.utx['output'].append({
+            "value": client.COINBASE,
+            "pub_key": vk.to_string().hex()
+        })
+
+    # mine transaction
+    print("Mining transaction...")
+    # generate nonce until hash is less than difficulty
+    nonce = Random.new().read(AES.block_size).hex()
+    while int(hashlib.sha256(json.dumps(client.utx, sort_keys=True).encode('utf8') + prev.encode('utf-8') + nonce.encode('utf-8')).hexdigest(), 16) > client.DIFFICULTY:
+        nonce = Random.new().read(AES.block_size).hex()
+    pow = hashlib.sha256(json.dumps(client.utx, sort_keys=True).encode(
+        'utf8') + prev.encode('utf-8') + nonce.encode('utf-8')).hexdigest()
+
+    # create block
+    block = {
+        "type": client.BLOCK,
+        "id": hashlib.sha256(json.dumps(client.utx, sort_keys=True).encode('utf8')).hexdigest(),
+        "nonce": nonce,
+        "pow": pow,
+        "prev": prev,
+        "tx": client.utx
+    }
+    print("Transaction successfully mined:", json.dumps(block, indent=1))
+    client.sent_to_nodes(block)
+
 
 def main():
 
