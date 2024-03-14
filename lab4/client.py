@@ -202,8 +202,7 @@ def get_transaction_input(client: ZachCoinClient, vk: VerifyingKey) -> tuple[str
     for i, unspent_output in enumerate(unspent_outputs):
         block_index, output_index = unspent_output
         output = client.blockchain[block_index]['tx']['output'][output_index]
-        print(f"-------- {i} --------\nBlock: {block_index}\nOutput: {
-              output_index}\n{json.dumps(output, indent=1)}")
+        print(f"-------- {i} --------\nBlock: {block_index}\nOutput: {output_index}\n{json.dumps(output, indent=1)}")
     x = input("Enter the number of the transaction output -> ")
     try:
         x = int(x)
@@ -245,9 +244,7 @@ def create_transaction(client: ZachCoinClient, sk: SigningKey, vk: VerifyingKey)
     Create a transaction and add it to the unverified transaction pool
     """
     # get input block
-    input_info = get_transaction_input(client, vk)
-    input_id = input_info["id"]
-    input_n = input_info["n"]
+    input_id, input_n = get_transaction_input(client, vk)
     print("Input block:", input_id)
     print("Output number:", input_n)
     
@@ -273,7 +270,7 @@ def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
     # prompt user to select a transaction to mine
     print("Select an unverified transaction from the UTX pool:")
     for i, utx in enumerate(client.utx):
-        print(f"-------- {i} --------\n{json.dumps(utx, indent=1)}")
+        print(f"Unverified transactin # {i} \n{json.dumps(utx, indent=1)}")
     x = input("Enter the number of the transaction -> ")
     try:
         x = int(x)
@@ -289,7 +286,7 @@ def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
 
     # get previous block
     prev = client.blockchain[-1]['id']
-    client.utx['output'].append({
+    utx['output'].append({
             "value": client.COINBASE,
             "pub_key": vk.to_string().hex()
         })
@@ -298,9 +295,9 @@ def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
     print("Mining transaction...")
     # generate nonce until hash is less than difficulty
     nonce = Random.new().read(AES.block_size).hex()
-    while int(hashlib.sha256(json.dumps(client.utx, sort_keys=True).encode('utf8') + prev.encode('utf-8') + nonce.encode('utf-8')).hexdigest(), 16) > client.DIFFICULTY:
+    while int(hashlib.sha256(json.dumps(utx, sort_keys=True).encode('utf8') + prev.encode('utf-8') + nonce.encode('utf-8')).hexdigest(), 16) > client.DIFFICULTY:
         nonce = Random.new().read(AES.block_size).hex()
-    pow = hashlib.sha256(json.dumps(client.utx, sort_keys=True).encode(
+    pow = hashlib.sha256(json.dumps(utx, sort_keys=True).encode(
         'utf8') + prev.encode('utf-8') + nonce.encode('utf-8')).hexdigest()
 
     # create block
@@ -385,7 +382,6 @@ def main():
             print(json.dumps(client.utx, indent=1))
         elif x == 3:
             create_transaction(client, sk, vk)
-        # mine transaction
         elif x == 4:
             mine_transaction(client, vk)
         # quit
