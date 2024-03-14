@@ -105,7 +105,7 @@ class ZachCoinClient (Node):
         }
         
         # sign transaction
-        signature = sk.sign(json.dumps(input_obj).encode("utf-8")).hex()
+        signature = sk.sign(json.dumps(input_obj, sort_keys=True).encode("utf-8")).hex()
         
         utx = {
             "type": self.TRANSACTION,
@@ -295,6 +295,8 @@ def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
 
     # get previous block
     prev = client.blockchain[-1]['id']
+    if not client.validate_transaction(utx, False):
+        return {}
     utx['output'].append({
             "value": client.COINBASE,
             "pub_key": vk.to_string().hex()
@@ -305,8 +307,12 @@ def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
 
     # generate nonce until hash is less than difficulty
     nonce = Random.new().read(AES.block_size).hex()
+    total_tried = 0
     while int(hashlib.sha256(json.dumps(utx, sort_keys=True).encode('utf8') + prev.encode('utf-8') + nonce.encode('utf-8')).hexdigest(), 16) > client.DIFFICULTY:
         nonce = Random.new().read(AES.block_size).hex()
+        total_tried += 1
+        if total_tried % 1000 == 0:
+            print("Mining... ", total_tried, " hashes tried")
     pow = hashlib.sha256(json.dumps(utx, sort_keys=True).encode(
         'utf8') + prev.encode('utf-8') + nonce.encode('utf-8')).hexdigest()
 
@@ -317,10 +323,50 @@ def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
         "nonce": nonce,
         "pow": pow,
         "prev": prev,
-        "tx": client.utx
+        "tx": utx
     }
     print("Transaction successfully mined")
     client.send_to_nodes(block)
+
+def get_wallet_balance(client: ZachCoinClient, vk: VerifyingKey):
+    """
+    Get the balance of the wallet
+    """
+    unspent_outputs = []
+    spent_outputs = []
+    total_balance = 0  # Initialize total balance variable
+    for i, block in enumerate(client.blockchain):
+        for j, output in enumerate(block['tx']['output']):
+            if output['pub_key'] == vk.to_string().hex():
+                spent = False
+                for blocks_spent in client.blockchain:
+                    if blocks_spent['tx']['input']['id'] == block['id'] and blocks_spent['tx']['input']['n'] == j:
+                        spent = True
+                        break
+                if spent:
+                    spent_outputs.append((i, j))
+                else:
+                    unspent_outputs.append((i, j))
+                    total_balance += output['value']  # Add the value of unspent output to total balance
+    # print list of unspent outputs
+    print("Unspent transaction outputs:")
+    for i, unspent_output in enumerate(unspent_outputs):
+        block_index, output_index = unspent_output
+        output = client.blockchain[block_index]['tx']['output'][output_index]
+        print("-" * 20)
+        print(f"Block: {block_index}\nOutput: {output_index}\n{json.dumps(output, indent=1)}")
+        print("-" * 20)
+    # print list of spent outputs
+    print("Spent transaction outputs:")
+    for i, spent_output in enumerate(spent_outputs):
+        block_index, output_index = spent_output
+        output = client.blockchain[block_index]['tx']['output'][output_index]
+        print("-" * 20)
+        print(f"Block: {block_index}\nOutput: {output_index}\n{json.dumps(output, indent=1)}")
+        print("-" * 20)
+    print("Total balance of unspent coins:", total_balance)  # Print the total balance
+
+
 
 
 def main():
@@ -373,6 +419,7 @@ def main():
         2: Print UTX pool
         3: Create transaction
         4: Mine transaction
+        5: Get wallet balance
         
         9: Quit
 
@@ -400,6 +447,8 @@ def main():
             create_transaction(client, sk, vk)
         elif x == 4:
             mine_transaction(client, vk)
+        elif x == 5:
+            get_wallet_balance(client, vk)
         # quit
         elif x == 9:
             client.stop()
