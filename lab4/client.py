@@ -4,6 +4,7 @@ from p2pnetwork.node import Node
 from Crypto import Random
 import hashlib
 from Crypto.Cipher import AES
+import threading
 
 SERVER_ADDR = "zachcoin.net"
 SERVER_PORT = 9067
@@ -72,6 +73,7 @@ class ZachCoinClient (Node):
                     self.blockchain = data['blockchain']
                 elif data['type'] == self.UTXPOOL:
                     self.utx = data['utxpool']
+                    self.utx = [utx for utx in self.utx if self.validate_transaction(utx)]
                 elif data['type'] == self.BLOCK:
                     # verify block
                     if self.validate_block(data):
@@ -116,69 +118,74 @@ class ZachCoinClient (Node):
         return utx
     
     
-    def validate_block(self, block: dict) -> bool:
-        """
-        Ensure block is a valid ZachCoin block
-        """
-        if block['type'] != self.BLOCK or block['id'] != hashlib.sha256(json.dumps(block['tx'], sort_keys=True).encode('utf8')).hexdigest() or block['prev'] != self.blockchain[-1]['id'] or int(block['pow'], 16) > self.DIFFICULTY:
-            print("Error: Block is not valid")
+    def validate_block(self, block):
+        #Check if block is valid
+        if not 'type' in block or not 'id' in block or not 'nonce' in block or not 'pow' in block or not 'prev' in block or not 'tx' in block:
             return False
-        # validate transaction within block
-        return self.validate_transaction(block['tx'])
+        if block['type'] != self.BLOCK:
+            return False
+        if block['id'] != hashlib.sha256(json.dumps(block['tx'], sort_keys=True).encode('utf8')).hexdigest():
+            return False
+        if block['prev'] != self.blockchain[-1]['id']:
+            return False
+        if int(block['pow'], 16) > self.DIFFICULTY:
+            return False
+        return self.validate_transaction(block['tx'], True)
     
-
-    def validate_transaction(self, tx: dict, validate_coinbase: bool = True) -> bool:
-        """
-        Ensure transaction is a valid ZachCoin transaction
-        """
-        # The transaction is structurally valid
-        if 'type' not in tx or 'input' not in tx or 'sig' not in tx or 'output' not in tx or tx['type'] != self.TRANSACTION:
-            print("Error: Transaction is not valid")
+    
+    def validate_transaction(self, tx, blockchain = False):
+        #Check if transaction is valid
+        if not 'type' in tx or not 'input' in tx or not 'sig' in tx or not 'output' in tx:
             return False
-        # The transaction input is valid
-        input_blocks = list(filter(
-            lambda x: x['id'] == tx['input']['id'], self.blockchain))
-        if len(input_blocks) == 0:
-            print("Error: Transaction input refers to an invalid block")
+        if not 'id' in tx['input'] or not 'n' in tx['input']:
             return False
-        input_block = input_blocks[0]
-
-        # ZC is valid (hasn't been spent yet)
-        if len(list(filter(lambda x: x['tx']['input']['id'] == tx['input']['id'], self.blockchain))) > 1:
-            print("Error: Transaction input is already spent")
-            return False
-
-        # Validate outputs
-        if len(tx['output']) < 1 + int(validate_coinbase) or len(tx['output']) > 2 + int(validate_coinbase):
-            print("Error: Transaction output count is not valid")
-            return False
-        sum = 0
-        if validate_coinbase:
-            sum -= self.COINBASE
         for output in tx['output']:
-            if output['value'] <= 0:
-                print("Error: Transaction output value is not positive")
+            if not 'value' in output or not 'pub_key' in output:
                 return False
-            sum += output['value']
-        if sum != input_block['tx']['output'][tx['input']['n']]['value']:
-            print("Error: Transaction input value does not equal output value")
+        if tx['type'] != self.TRANSACTION:
             return False
-
-        # The coinbase output is correct (in value)
-        if validate_coinbase and tx['output'][-1]['value'] != self.COINBASE:
-            print("Error: Transaction coinbase value is not valid")
+        # check if input is in blockchain
+        if tx['input']['id'] not in [block['id'] for block in self.blockchain]:
             return False
-
-        # That the signature of the transaction verifies
-        vk = VerifyingKey.from_string(bytes.fromhex(
-            input_block['tx']['output'][tx['input']['n']]['pub_key']))
+        # check if input is already spent
+        for block in self.blockchain:
+            if block['tx']['input']['id'] == tx['input']['id'] and block['tx']['input']['n'] == tx['input']['n']:
+                return False
+        # check all outputs values positive integers
+        if any([not isinstance(output['value'], int) or output['value'] < 0 for output in tx['output']]):
+            return False
+        # check correct num outputs
+        if blockchain:
+            if len(tx['output']) < 2 or len(tx['output']) > 3:
+                return False
+            # check coinbase val correct
+            if tx['output'][-1]['value'] != self.COINBASE:
+                return False
+        else:
+            if len(tx['output']) < 1 or len(tx['output']) > 2:
+                return False  
+        # check if input is equal to sum of outputs
+        input_block_output_arr = [block['tx']['output'] for block in self.blockchain if block['id'] == tx['input']['id']]
+        if len(input_block_output_arr) != 1:
+            return False
+        input_block_output = input_block_output_arr[0]
+        if not isinstance(tx['input']['n'], int):
+            return False
+        if tx['input']['n'] < 0 or tx['input']['n'] >= len(input_block_output):
+            return False
+        input_value = [output['value'] for output in input_block_output][tx['input']['n']]
+        if blockchain:
+            if input_value != (sum([output['value'] for output in tx['output'][:-1]])):
+                return False
+        else:
+            if input_value != (sum([output['value'] for output in tx['output']])):
+                return False
+        # check if signature is valid
+        vk = VerifyingKey.from_string(bytes.fromhex(input_block_output[tx['input']['n']]['pub_key']))
         try:
-            vk.verify(bytes.fromhex(tx['sig']), json.dumps(
-                tx['input'], sort_keys=True).encode('utf8'))
+            vk.verify(bytes.fromhex(tx['sig']), json.dumps(tx['input'], sort_keys=True).encode('utf8'))
         except:
-            print("Error: Transaction signature is not valid")
             return False
-        print("Transaction is valid")
         return True
     
 
@@ -295,8 +302,7 @@ def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
 
     # get previous block
     prev = client.blockchain[-1]['id']
-    if not client.validate_transaction(utx, False):
-        return {}
+
     utx['output'].append({
             "value": client.COINBASE,
             "pub_key": vk.to_string().hex()
@@ -307,19 +313,16 @@ def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
 
     # generate nonce until hash is less than difficulty
     nonce = Random.new().read(AES.block_size).hex()
-    total_tried = 0
     while int(hashlib.sha256(json.dumps(utx, sort_keys=True).encode('utf8') + prev.encode('utf-8') + nonce.encode('utf-8')).hexdigest(), 16) > client.DIFFICULTY:
         nonce = Random.new().read(AES.block_size).hex()
-        total_tried += 1
-        if total_tried % 1000 == 0:
-            print("Mining... ", total_tried, " hashes tried")
+
     pow = hashlib.sha256(json.dumps(utx, sort_keys=True).encode(
         'utf8') + prev.encode('utf-8') + nonce.encode('utf-8')).hexdigest()
 
     # create block
     block = {
         "type": client.BLOCK,
-        "id": hashlib.sha256(json.dumps(client.utx, sort_keys=True).encode('utf8')).hexdigest(),
+        "id": hashlib.sha256(json.dumps(utx, sort_keys=True).encode('utf8')).hexdigest(),
         "nonce": nonce,
         "pow": pow,
         "prev": prev,
