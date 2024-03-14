@@ -119,68 +119,48 @@ class ZachCoinClient (Node):
     
     
     def validate_block(self, block):
-        #Check if block is valid
-        if not 'type' in block or not 'id' in block or not 'nonce' in block or not 'pow' in block or not 'prev' in block or not 'tx' in block:
-            return False
-        if block['type'] != self.BLOCK:
-            return False
-        if block['id'] != hashlib.sha256(json.dumps(block['tx'], sort_keys=True).encode('utf8')).hexdigest():
-            return False
-        if block['prev'] != self.blockchain[-1]['id']:
-            return False
-        if int(block['pow'], 16) > self.DIFFICULTY:
-            return False
+        if not 'type' in block or not 'id' in block or not 'nonce' in block or not 'pow' in block or not 'prev' in block or not 'tx' in block or \
+            block['type'] != self.BLOCK or \
+            block['id'] != hashlib.sha256(json.dumps(block['tx'], sort_keys=True).encode('utf8')).hexdigest() or \
+            block['prev'] != self.blockchain[-1]['id'] or \
+            int(block['pow'], 16) > self.DIFFICULTY:
+             return False
         return self.validate_transaction(block['tx'], True)
     
     
-    def validate_transaction(self, tx, blockchain = False):
-        #Check if transaction is valid
-        if not 'type' in tx or not 'input' in tx or not 'sig' in tx or not 'output' in tx:
+    def validate_transaction(self, tx, blockchain=False):
+        if not all(key in tx for key in ['type', 'input', 'sig', 'output']) or \
+           not all(key in tx['input'] for key in ['id', 'n']) or \
+           not all(key in output for output in tx['output'] for key in ['value', 'pub_key']) or \
+           tx['type'] != self.TRANSACTION:
             return False
-        if not 'id' in tx['input'] or not 'n' in tx['input']:
-            return False
-        for output in tx['output']:
-            if not 'value' in output or not 'pub_key' in output:
-                return False
-        if tx['type'] != self.TRANSACTION:
-            return False
-        # check if input is in blockchain
         if tx['input']['id'] not in [block['id'] for block in self.blockchain]:
             return False
-        # check if input is already spent
-        for block in self.blockchain:
-            if block['tx']['input']['id'] == tx['input']['id'] and block['tx']['input']['n'] == tx['input']['n']:
-                return False
-        # check all outputs values positive integers
-        if any([not isinstance(output['value'], int) or output['value'] < 0 for output in tx['output']]):
+        if any(not isinstance(output['value'], int) or output['value'] < 0 for output in tx['output']):
             return False
-        # check correct num outputs
         if blockchain:
-            if len(tx['output']) < 2 or len(tx['output']) > 3:
+            if not (2 <= len(tx['output']) <= 3):
                 return False
-            # check coinbase val correct
             if tx['output'][-1]['value'] != self.COINBASE:
                 return False
         else:
-            if len(tx['output']) < 1 or len(tx['output']) > 2:
-                return False  
-        # check if input is equal to sum of outputs
+            if not (1 <= len(tx['output']) <= 2):
+                return False
         input_block_output_arr = [block['tx']['output'] for block in self.blockchain if block['id'] == tx['input']['id']]
         if len(input_block_output_arr) != 1:
             return False
         input_block_output = input_block_output_arr[0]
         if not isinstance(tx['input']['n'], int):
             return False
-        if tx['input']['n'] < 0 or tx['input']['n'] >= len(input_block_output):
+        if not (0 <= tx['input']['n'] < len(input_block_output)):
             return False
-        input_value = [output['value'] for output in input_block_output][tx['input']['n']]
+        input_value = input_block_output[tx['input']['n']]['value']
         if blockchain:
-            if input_value != (sum([output['value'] for output in tx['output'][:-1]])):
+            if input_value != sum(output['value'] for output in tx['output'][:-1]):
                 return False
         else:
-            if input_value != (sum([output['value'] for output in tx['output']])):
+            if input_value != sum(output['value'] for output in tx['output']):
                 return False
-        # check if signature is valid
         vk = VerifyingKey.from_string(bytes.fromhex(input_block_output[tx['input']['n']]['pub_key']))
         try:
             vk.verify(bytes.fromhex(tx['sig']), json.dumps(tx['input'], sort_keys=True).encode('utf8'))
