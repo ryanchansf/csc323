@@ -233,10 +233,12 @@ def get_recipient(change: bool = False):
     Get the recipient and amount for a new transaction
     """
     if change:
-        print("\nOptional: Enter a second recipient to receive change. \
+        print("\nOptional: Enter a second recipient to receive change.\n \
               Leave blank to skip.")
         
     recipient = input("Enter the recipient's public key -> ")
+    if recipient == "" and change:
+        return None, None
     amount = input("Enter the amount to send -> ")
     try:
         amount = int(amount)
