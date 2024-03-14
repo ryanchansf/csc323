@@ -388,11 +388,14 @@ def main():
             print("vk: ", vk.to_string().hex())
         elif x == 1:
             for i, block in enumerate(client.blockchain):
-                print(f"Block #{i+1}:")
+                print(f"Block #{i}:")
                 print(json.dumps(block, indent=1))
                 print("-" * 20)
         elif x == 2:
-            print(json.dumps(client.utx, indent=1))
+            for i, utx in enumerate(client.utx):
+                print(f"Unverified transaction #{i}:")
+                print(json.dumps(utx, indent=1))
+                print("-" * 20)
         elif x == 3:
             create_transaction(client, sk, vk)
         elif x == 4:
