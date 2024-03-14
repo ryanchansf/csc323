@@ -72,7 +72,17 @@ class ZachCoinClient (Node):
                     self.blockchain = data['blockchain']
                 elif data['type'] == self.UTXPOOL:
                     self.utx = data['utxpool']
-                #TODO: Validate blocks
+                elif data['type'] == self.BLOCK:
+                    # verify block
+                    if self.validate_block(data):
+                        print("Block added to blockchain.")
+                        # remove transactions from utxpool
+                        self.utx = list(
+                            filter(lambda x: x['input']['id'] != data['tx']['input']['id'], self.utx))
+                        # add block to blockchain
+                        self.blockchain.append(data)
+                    else:
+                        print("Error: Invalid block received.")
 
     def node_disconnect_with_outbound_node(self, connected_node):
         print("node wants to disconnect with oher outbound node: " + connected_node.id)
@@ -103,57 +113,110 @@ class ZachCoinClient (Node):
             "output": outputs
         }
         return utx
+    
+    
+    def validate_block(self, block: dict) -> bool:
+        """
+        Ensure block is a valid ZachCoin block
+        """
+        if block['type'] != self.BLOCK or block['id'] != hashlib.sha256(json.dumps(block['tx'], sort_keys=True).encode('utf8')).hexdigest() or block['prev'] != self.blockchain[-1]['id'] or int(block['pow'], 16) > self.DIFFICULTY:
+            print("Error: Block is not valid")
+            return False
+        # validate transaction within block
+        return self.validate_transaction(block['tx'])
+    
 
+    def validate_transaction(self, tx: dict, validate_coinbase: bool = True) -> bool:
+        """
+        Ensure transaction is a valid ZachCoin transaction
+        """
+        # The transaction is structurally valid
+        if 'type' not in tx or 'input' not in tx or 'sig' not in tx or 'output' not in tx or tx['type'] != self.TRANSACTION:
+            print("Error: Transaction is not valid")
+            return False
+        # The transaction input is valid
+        input_blocks = list(filter(
+            lambda x: x['id'] == tx['input']['id'], self.blockchain))
+        if len(input_blocks) == 0:
+            print("Error: Transaction input refers to an invalid block")
+            return False
+        input_block = input_blocks[0]
 
-def get_input_block(client: ZachCoinClient):
+        # ZC is valid (hasn't been spent yet)
+        if len(list(filter(lambda x: x['tx']['input']['id'] == tx['input']['id'], self.blockchain))) > 1:
+            print("Error: Transaction input is already spent")
+            return False
+
+        # Validate outputs
+        if len(tx['output']) < 1 + int(validate_coinbase) or len(tx['output']) > 2 + int(validate_coinbase):
+            print("Error: Transaction output count is not valid")
+            return False
+        sum = 0
+        if validate_coinbase:
+            sum -= self.COINBASE
+        for output in tx['output']:
+            if output['value'] <= 0:
+                print("Error: Transaction output value is not positive")
+                return False
+            sum += output['value']
+        if sum != input_block['tx']['output'][tx['input']['n']]['value']:
+            print("Error: Transaction input value does not equal output value")
+            return False
+
+        # The coinbase output is correct (in value)
+        if validate_coinbase and tx['output'][-1]['value'] != self.COINBASE:
+            print("Error: Transaction coinbase value is not valid")
+            return False
+
+        # That the signature of the transaction verifies
+        vk = VerifyingKey.from_string(bytes.fromhex(
+            input_block['tx']['output'][tx['input']['n']]['pub_key']))
+        try:
+            vk.verify(bytes.fromhex(tx['sig']), json.dumps(
+                tx['input'], sort_keys=True).encode('utf8'))
+        except:
+            print("Error: Transaction signature is not valid")
+            return False
+        print("Transaction is valid")
+        return True
+    
+
+def get_transaction_input(client: ZachCoinClient, vk: VerifyingKey) -> tuple[str, int]:
     """
-    Get the input block for a new transaction
+    Prompt the user to select an unspent transaction output
     """
-    # user picks block from blockchain
-    print("\nChoose a block from the blockchain to use as input:")
-    print("\n" + "-" * 20)
+    # get list of unspent transaction outputs
+    unspent_outputs = []
     for i, block in enumerate(client.blockchain):
-        print(f"Block {i}:")
-        print("-" * 20)
-        print(json.dumps(block, indent=4))
-        print("-" * 20)
-    x = input("Which block would you like to use? Enter the corresponding number -> ")
+        for j, output in enumerate(block['tx']['output']):
+            if output['pub_key'] == vk.to_string().hex():
+                spent = False
+                for blocks_spent in client.blockchain:
+                    if blocks_spent['tx']['input']['id'] == block['id'] and blocks_spent['tx']['input']['n'] == j:
+                        spent = True
+                        break
+                if not spent:
+                    unspent_outputs.append((i, j))
+    # print list of blocks
+    print("Select an unspent transaction output from the blockchain:")
+    for i, unspent_output in enumerate(unspent_outputs):
+        block_index, output_index = unspent_output
+        output = client.blockchain[block_index]['tx']['output'][output_index]
+        print(f"-------- {i} --------\nBlock: {block_index}\nOutput: {
+              output_index}\n{json.dumps(output, indent=1)}")
+    x = input("Enter the number of the transaction output -> ")
     try:
         x = int(x)
-        
-        # verify that the block exists
-        if x < 0 or x >= len(client.blockchain):
-            print("Error: Invalid block number.")
-            return None
     except:
         print("Error: Invalid block number.")
         return None
-    
-    block = client.blockchain[x]
-    
-    # user picks transaction output from block
-    print("\nChoose a transaction output from the block to use as input:")
-    for i, tx in enumerate(block["tx"]["output"]):
-        print(f"Output {i}:")
-        print("-" * 20)
-        print(json.dumps(tx, indent=4))
-        print("-" * 20)
-    n = input("Which output would you like to use? Enter the corresponding number -> ")
-    try:
-        n = int(n)
-        
-        # verify that the output exists
-        if n < 0 or n >= len(block["tx"]["output"]):
-            print("Error: Invalid output number.")
-            return None
-    except:
-        print("Error: Invalid output number.")
+
+    # check if input number is valid
+    if x < 0 or x >= len(unspent_outputs):
+        print("Error: Invalid number.")
         return None
-    
-    return {
-        "id": block["id"],
-        "n": n
-    }
+    block_index, output_index = unspent_outputs[x]
+    return client.blockchain[block_index]['id'], output_index
     
     
 def get_recipient(change: bool = False):
@@ -177,12 +240,12 @@ def get_recipient(change: bool = False):
     return recipient, amount
 
 
-def create_transaction(client: ZachCoinClient, sk: SigningKey):
+def create_transaction(client: ZachCoinClient, sk: SigningKey, vk: VerifyingKey):
     """
     Create a transaction and add it to the unverified transaction pool
     """
     # get input block
-    input_info = get_input_block(client)
+    input_info = get_transaction_input(client, vk)
     input_id = input_info["id"]
     input_n = input_info["n"]
     print("Input block:", input_id)
@@ -200,9 +263,6 @@ def create_transaction(client: ZachCoinClient, sk: SigningKey):
     
     print("Creating transaction...", json.dumps(utx, indent=1))
     client.send_to_nodes(utx)
-
-
-
 
 
 def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
@@ -323,12 +383,8 @@ def main():
             print(json.dumps(client.blockchain, indent=1))
         elif x == 2:
             print(json.dumps(client.utx, indent=1))
-        # TODO: Add options for creating and mining transactions
-        # as well as any other additional features
-        
-        # create transaction
         elif x == 3:
-            create_transaction(client, sk)
+            create_transaction(client, sk, vk)
         # mine transaction
         elif x == 4:
             mine_transaction(client, vk)
