@@ -208,12 +208,12 @@ def get_transaction_input(client: ZachCoinClient, vk: VerifyingKey) -> tuple[str
         x = int(x)
     except:
         print("Error: Invalid block number.")
-        return None
+        raise Exception
 
     # check if input number is valid
     if x < 0 or x >= len(unspent_outputs):
         print("Error: Invalid number.")
-        return None
+        raise Exception
     block_index, output_index = unspent_outputs[x]
     return client.blockchain[block_index]['id'], output_index
     
@@ -232,10 +232,10 @@ def get_recipient(change: bool = False):
         amount = int(amount)
         if amount <= 0:
             print("Error: Invalid amount.")
-            return None, None
+            raise Exception
     except:
         print("Error: Invalid amount.")
-        return None, None
+        raise Exception
     return recipient, amount
 
 
@@ -244,22 +244,26 @@ def create_transaction(client: ZachCoinClient, sk: SigningKey, vk: VerifyingKey)
     Create a transaction and add it to the unverified transaction pool
     """
     # get input block
-    input_id, input_n = get_transaction_input(client, vk)
-    print("Input block:", input_id)
-    print("Output number:", input_n)
-    
-    # parse recipient and amount
-    recipient, amount = get_recipient()
-    # optional second output for change
-    self_recipient, change = get_recipient(change=True)
-    
-    recipients = [recipient] + ([self_recipient] if self_recipient else [])
-    amounts = [int(amount)] + ([int(change)] if change else [])
-    
-    utx = client.transaction(sk, input_id, input_n, recipients, amounts)
-    
-    print("Creating transaction...", json.dumps(utx, indent=1))
-    client.send_to_nodes(utx)
+    try:
+        input_id, input_n = get_transaction_input(client, vk)
+        print("Input block:", input_id)
+        print("Output number:", input_n)
+        
+        # parse recipient and amount
+        recipient, amount = get_recipient()
+        # optional second output for change
+        self_recipient, change = get_recipient(change=True)
+        
+        recipients = [recipient] + ([self_recipient] if self_recipient else [])
+        amounts = [int(amount)] + ([int(change)] if change else [])
+        
+        utx = client.transaction(sk, input_id, input_n, recipients, amounts)
+        
+        print("Creating transaction...", json.dumps(utx, indent=1))
+        client.send_to_nodes(utx)
+    except:
+        print("Error: Transaction creation failed.")
+        return
 
 
 def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
