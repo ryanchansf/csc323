@@ -76,6 +76,7 @@ class ZachCoinClient (Node):
                     # verify block
                     if self.validate_block(data):
                         print("Block added to blockchain.")
+                        print("Block ID:", data['id'])
                         # remove transactions from utxpool
                         self.utx = list(
                             filter(lambda x: x['input']['id'] != data['tx']['input']['id'], self.utx))
@@ -202,8 +203,10 @@ def get_transaction_input(client: ZachCoinClient, vk: VerifyingKey) -> tuple[str
     for i, unspent_output in enumerate(unspent_outputs):
         block_index, output_index = unspent_output
         output = client.blockchain[block_index]['tx']['output'][output_index]
-        print(f"-------- {i} --------\nBlock: {block_index}\nOutput: {output_index}\n{json.dumps(output, indent=1)}")
-    x = input("Enter the number of the transaction output -> ")
+        print("-" * 20)
+        print(f"OPTION #{i}\nBlock: {block_index}\nOutput: {output_index}\n{json.dumps(output, indent=1)}")
+        print("-" * 20)
+    x = input("Enter the OPTION # of the transaction output -> ")
     try:
         x = int(x)
     except:
@@ -274,7 +277,9 @@ def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
     # prompt user to select a transaction to mine
     print("Select an unverified transaction from the UTX pool:")
     for i, utx in enumerate(client.utx):
-        print(f"Unverified transactin # {i} \n{json.dumps(utx, indent=1)}")
+        print("-" * 20)
+        print(f"Unverified transaction # {i} \n{json.dumps(utx, indent=1)}")
+        print("-" * 20)
     x = input("Enter the number of the transaction -> ")
     try:
         x = int(x)
@@ -296,7 +301,8 @@ def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
         })
 
     # mine transaction
-    print("Mining transaction...")
+    print("Mining block with ID ", utx['input']['id'])
+
     # generate nonce until hash is less than difficulty
     nonce = Random.new().read(AES.block_size).hex()
     while int(hashlib.sha256(json.dumps(utx, sort_keys=True).encode('utf8') + prev.encode('utf-8') + nonce.encode('utf-8')).hexdigest(), 16) > client.DIFFICULTY:
@@ -313,8 +319,8 @@ def mine_transaction(client: ZachCoinClient, vk: VerifyingKey):
         "prev": prev,
         "tx": client.utx
     }
-    print("Transaction successfully mined:", json.dumps(block, indent=1))
-    client.sent_to_nodes(block)
+    print("Transaction successfully mined")
+    client.send_to_nodes(block)
 
 
 def main():
@@ -381,7 +387,10 @@ def main():
             print("sk: ", sk.to_string().hex())
             print("vk: ", vk.to_string().hex())
         elif x == 1:
-            print(json.dumps(client.blockchain, indent=1))
+            for i, block in enumerate(client.blockchain):
+                print(f"Block #{i+1}:")
+                print(json.dumps(block, indent=1))
+                print("-" * 20)
         elif x == 2:
             print(json.dumps(client.utx, indent=1))
         elif x == 3:
